@@ -93,7 +93,9 @@ def find_ice_api_server ():
     # API endpoint: https://api.ng.bluemix.net (API version: 2.23.0)
     # so take out just the part we need
     words = out.split()
-    API_SERVER = words[2]
+    for word in words:
+        if word.startswith("https://"):
+            API_SERVER=word
     # point to ice server, not cf server
     API_SERVER = API_SERVER.replace ( 'api.', 'api-ice.')
     if DEBUG=="1":
