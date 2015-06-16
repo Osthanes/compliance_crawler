@@ -1,0 +1,98 @@
+{
+    "id": "ibm.devops.services.pipeline.crawler.tester",
+    "version": 1,
+    "name_key": "ExtName",
+    "desc_key": "ExtDesc",
+    "extension_type": "Test",
+    "message_key": "ExtMessage",
+    "inputs": [
+        {
+            "type": "Bluemix",
+            "inclusion" : "always"
+        }
+    ],
+    "params": [
+        {
+            "name": "WAIT_TIME",
+            "type": "Text",
+            "required": "false",
+            "default_value": "5",
+            "label_key": "WAIT_TIME_KEY",
+            "desc_key": "WAIT_TIME_DESC"
+        }
+    ],
+    "outputs": [
+        {
+            "type": "Artifacts",
+            "inclusion" : "always"
+        }
+    ],
+    "execution": {
+        "type": "JenkinsDocker",
+        "shell": "#!/bin/bash
+set +x
+set +e
+export INIT_START_TIME=$(date +\"%s\")
+export WAIT_TIME=#WAIT_TIME#
+# OSSC line
+dpkg -l | grep '^ii' > $EXT_DIR/pkglist
+. $EXT_DIR/_init.sh
+# OSSC line
+dpkg -l | grep '^ii' > $EXT_DIR/pkglist2
+if [[ $DEBUG -eq 1 ]]; then
+    diff $EXT_DIR/pkglist $EXT_DIR/pkglist2
+fi
+INIT_END_TIME=$(date +\"%s\")
+export INIT_EST_TIME=$(($INIT_END_TIME-$INIT_START_TIME))
+echo -e \"Init runtime of `date -u -d @\"$INIT_EST_TIME\" +\'%-Mm %-Ss\'`\"
+echo -e \"${label_color}Starting test script${no_color}\"
+
+# helper function to print the end time for this script
+end_script_time() {
+    SCRIPT_END_TIME=$(date +\"%s\")
+    SCRIPT_EST_TIME=$(($SCRIPT_END_TIME-$INIT_END_TIME))
+    echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
+}
+
+# run the python crawler checker to get, dump results on output
+if [ -f ${EXT_DIR}/check_crawler_results.py ]; then 
+    ${EXT_DIR}/check_crawler_results.py
+    RESULT=$?
+
+    if [ \"${ARCHIVE_DIR}\" == \"${WORKSPACE}\" ]; then 
+        echo \"Achive directory, is the working directory\"
+    else 
+        echo \"Archive directory, is ${ARCHIVE_DIR}.  Copy all content to that directory\"
+        pushd ${WORKSPACE} &> /dev/null
+        # also copy .git metadata
+        if [ -d .git ]; then
+            tar -cf source.tar * .git
+        else
+            tar -cf source.tar *
+        fi
+        mv source.tar ${ARCHIVE_DIR}
+        cd ${ARCHIVE_DIR}
+        tar -xf source.tar 
+        rm source.tar 
+        popd &> /dev/null
+    fi 
+
+    if [ $RESULT -ne 0 ]; then
+        echo -e \"${red}Issues found in or while getting compliance results ${no_color}\"
+        end_script_time
+        exit 1
+    else
+        echo -e \"${green}Compliance and vulnerability scan was successful ${no_color}\"
+    fi  
+else 
+    echo -e \"${red}Compliance scan helper script not available, failed.${no_color}\"
+    end_script_time
+    exit 1
+fi  
+"
+    }
+    },
+    "project": "https://hub.jazz.net/project/alchemy/Alchemy-Ostanes",
+    "project_example": "https://hub.jazz.net/pipeline/rjminsha/ice-pipeline_demo",
+    "project_contact": "rjminsha@us.ibm.com"
+}
