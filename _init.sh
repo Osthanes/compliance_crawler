@@ -41,12 +41,30 @@ if [ -n $EXT_DIR ]; then
     export PATH=$EXT_DIR:$PATH
 fi 
 
-echo "IMAGE_NAME: $IMAGE_NAME"
-
+##############################
+# Identify the Image to use  #
+##############################
+# If the IMAGE_NAME is set in the environment then use that.  
+# Else assume the input is coming from the build.properties created and archived by the Docker builder job
 if [ -z $IMAGE_NAME ]; then
-    echo -e "${red}IMAGE_NAME needs to be set to the image to check. Please either set an IBM Container Service build job as input to this stage, or set IMAGE_NAME to the correct fully qualified container image to check.${no_color}"
-    exit 1
-fi
+    debugme "finding build.properties"
+    debugme pwd 
+    debugme ls
+
+    if [ -f build.properties ]; then
+        . build.properties 
+        export IMAGE_NAME
+        debugme cat build.properties
+        echo "IMAGE_NAME: $IMAGE_NAME"
+    fi  
+    if [ -z $IMAGE_NAME ]; then
+        echo -e "${red}IMAGE_NAME not set. Set the IMAGE_NAME in the environment or provide a Docker build job as input to this deploy job ${no_color}" | tee -a "$ERROR_LOG_FILE"
+        ${EXT_DIR}/print_help.sh
+        exit 1
+    fi 
+else 
+    echo -e "${label_color}Image being overridden by the environment. Using ${IMAGE_NAME} ${no_color}"
+fi 
 
 ################################
 # Setup archive information    #
