@@ -292,7 +292,10 @@ def get_vuln_info ( imagename ):
         LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
 
     if res.status_code != 200:
-        raise Exception("Unable to contact server, request got return code " + str(res.status_code))
+        if res.status_code == 401:
+            raise Exception("Failed to find image: message was: " + str(res.text))
+        else:
+            raise Exception("Unable to contact server, request got return code " + str(res.status_code))
 
     return res.json()
 
@@ -326,7 +329,10 @@ def get_comp_info ( imagename ):
         LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
 
     if res.status_code != 200:
-        raise Exception("Unable to contact server, request got return code " + str(res.status_code))
+        if res.status_code == 401:
+            raise Exception("Failed to find image: message was: " + str(res.text))
+        else:
+            raise Exception("Unable to contact server, request got return code " + str(res.status_code))
 
     return res.json()
 
@@ -486,7 +492,8 @@ try:
     sys.exit(0)
 
 except Exception, e:
-    LOGGER.warning("Exception received", exc_info=e)
+    LOGGER.warning("Execution failed - error was: " +  str(e))
+    LOGGER.debug("Exception received", exc_info=e)
     endtime = timeit.default_timer()
     print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
     sys.exit(1)
