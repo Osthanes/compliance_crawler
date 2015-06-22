@@ -71,7 +71,7 @@ def load_cf_auth_info ():
     with open( cf_filename ) as cf_config_file:
         config_info = json.load(cf_config_file)
         BEARER_TOKEN = config_info["AccessToken"]
-        if BEARER_TOKEN.startswith("bearer "):
+        if BEARER_TOKEN.lower().startswith("bearer "):
             BEARER_TOKEN=BEARER_TOKEN[7:]
         SPACE_GUID = config_info["SpaceFields"]["Guid"]
 
