@@ -36,13 +36,14 @@ STARS="**********************************************************************"
 
 # base locations to get the info
 CALL_VIA_API=True
-API_VULN_BASE_TEMPLATE="%s/v2/containers/images/validate?name=%s"
-API_COMP_BASE_TEMPLATE="%s/v2/containers/images/validate?name=%s&compliance=t"
+API_VULN_BASE_TEMPLATE="%s/v2/containers/images/validate"
+API_COMP_BASE_TEMPLATE="%s/v2/containers/images/validate?compliance=t"
 VULN_BASE_TEMPLATE="http://%s/vulnerabilityscan-*/vulnerabilityscan/_search?pretty"
 COMP_BASE_TEMPLATE="http://%s/compliance-*/_search?pretty"
 VULN_BASE_URL=""
 COMP_BASE_URL=""
 BODY_TEMPLATE="{ \"query\": { \"bool\":{ \"must\": [ { \"match_phrase_prefix\": { \"namespace.raw\" : \"%s\" } } ] } }, \"size\":\"100\" }"
+API_BODY_TEMPLATE="{ \"name\": \"%s\" }"
 API_SERVER=""
 CRAWLER_SERVER=""
 
@@ -274,19 +275,16 @@ def get_vuln_info ( imagename ):
     }
 
     if CALL_VIA_API:
-        url = API_VULN_BASE_TEMPLATE % (API_SERVER, imagename)
-
-        if DEBUG=="1":
-            LOGGER.debug("Sending request \"" + str(url) + "\" and headers \"" + str(xheaders) + "\"")
-        res = requests.get(url, headers=xheaders)
+        url = API_VULN_BASE_TEMPLATE % API_SERVER
+        body = API_BODY_TEMPLATE % imagename
 
     else:
         url = VULN_BASE_URL
         body = BODY_TEMPLATE % imagename
 
-        if DEBUG=="1":
-            LOGGER.debug("Sending request \"" + str(url) + "\" with body \"" + str(body) + "\" and headers \"" + str(xheaders) + "\"")
-        res = requests.post(url, data=body, headers=xheaders)
+    if DEBUG=="1":
+        LOGGER.debug("Sending request \"" + str(url) + "\" with body \"" + str(body) + "\" and headers \"" + str(xheaders) + "\"")
+    res = requests.post(url, data=body, headers=xheaders)
 
     if DEBUG=="1":
         LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
@@ -311,19 +309,16 @@ def get_comp_info ( imagename ):
     }
 
     if CALL_VIA_API:
-        url = API_COMP_BASE_TEMPLATE % (API_SERVER, imagename)
-
-        if DEBUG=="1":
-            LOGGER.debug("Sending request \"" + str(url) + "\" and headers \"" + str(xheaders) + "\"")
-        res = requests.get(url, headers=xheaders)
+        url = API_COMP_BASE_TEMPLATE % API_SERVER
+        body = API_BODY_TEMPLATE % imagename
 
     else:
         url = COMP_BASE_URL
         body = BODY_TEMPLATE % imagename
 
-        if DEBUG=="1":
-            LOGGER.debug("Sending request \"" + str(url) + "\" with body \"" + str(body) + "\" and headers \"" + str(xheaders) + "\"")
-        res = requests.post(url, data=body, headers=xheaders)
+    if DEBUG=="1":
+        LOGGER.debug("Sending request \"" + str(url) + "\" with body \"" + str(body) + "\" and headers \"" + str(xheaders) + "\"")
+    res = requests.post(url, data=body, headers=xheaders)
 
     if DEBUG=="1":
         LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
