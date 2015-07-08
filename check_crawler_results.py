@@ -98,7 +98,7 @@ def find_ice_api_server ():
         if word.startswith("https://"):
             API_SERVER=word
     # point to ice server, not cf server
-    API_SERVER = API_SERVER.replace ( 'api.', 'api-ice.')
+    API_SERVER = API_SERVER.replace ( 'api.', 'containers-api.')
     if DEBUG=="1":
         LOGGER.debug("API SERVER set to " + str(API_SERVER))
 
