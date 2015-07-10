@@ -60,9 +60,9 @@ if [ -f ${EXT_DIR}/check_crawler_results.py ]; then
     RESULT=$?
 
     if [ \"${ARCHIVE_DIR}\" == \"${WORKSPACE}\" ]; then 
-        echo \"Achive directory, is the working directory\"
+        echo \"Achive directory is the working directory\"
     else 
-        echo \"Archive directory, is ${ARCHIVE_DIR}.  Copy all content to that directory\"
+        echo \"Archive directory is $ARCHIVE_DIR - copying all content to that directory\"
         pushd ${WORKSPACE} &> /dev/null
         # also copy .git metadata
         if [ -d .git ]; then
@@ -70,8 +70,8 @@ if [ -f ${EXT_DIR}/check_crawler_results.py ]; then
         else
             tar -cf source.tar *
         fi
-        mv source.tar ${ARCHIVE_DIR}
-        cd ${ARCHIVE_DIR}
+        mv source.tar $ARCHIVE_DIR
+        cd $ARCHIVE_DIR
         tar -xf source.tar 
         rm source.tar 
         popd &> /dev/null
