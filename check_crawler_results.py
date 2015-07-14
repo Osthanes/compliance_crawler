@@ -36,8 +36,8 @@ STARS="**********************************************************************"
 
 # base locations to get the info
 CALL_VIA_API=True
-API_VULN_BASE_TEMPLATE="%s/v2/containers/images/validate"
-API_COMP_BASE_TEMPLATE="%s/v2/containers/images/validate?compliance=t"
+API_VULN_BASE_TEMPLATE="%s/v3/containers/images/validate"
+API_COMP_BASE_TEMPLATE="%s/v3/containers/images/validate?compliance=t"
 VULN_BASE_TEMPLATE="http://%s/vulnerabilityscan-*/vulnerabilityscan/_search?pretty"
 COMP_BASE_TEMPLATE="http://%s/compliance-*/_search?pretty"
 VULN_BASE_URL=""
@@ -54,6 +54,9 @@ VULN_IDS_TO_IGNORE=[]
 # call information for authentication
 BEARER_TOKEN=""
 SPACE_GUID=""
+
+# last image checked
+last_image_id=None
 
 DEBUG=os.environ.get('DEBUG')
 # time to sleep between checks when waiting on pending jobs, in seconds
@@ -263,6 +266,36 @@ def get_remaining_wait_time (first = False):
 
     return time_to_wait
 
+# given an image name, get the id for it
+def get_image_id_for_name( imagename ):
+    if not imagename:
+        return None
+
+    xheaders = {
+        'content-type': 'application/json',
+        'X-Auth-Token': BEARER_TOKEN,
+        'X-Auth-Project-Id': SPACE_GUID
+    }
+
+    url = "%s/v3/containers/images/json"
+    if DEBUG=="1":
+        LOGGER.debug("Sending request \"" + str(url) + "\" with headers \"" + str(xheaders) + "\"")
+    res = requests.get(url, headers=xheaders)
+
+    if DEBUG=="1":
+        LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
+
+    if res.status_code != 200:
+        return None
+
+    image_list = res.json()
+    for image in imagelist:
+        if image["Image"] == name:
+            if "Id" in image:
+                return image["Id"]
+
+    return None
+
 # get the vulnerability info for a given image name, if any
 def get_vuln_info ( imagename ):
     if not imagename:
@@ -334,6 +367,8 @@ def get_comp_info ( imagename ):
 # check for completed compliance results on an image
 # returns Boolean(complete), Boolean(all passed)
 def check_compliance (image):
+    global last_image_id
+
     comp_complete = False
     passed_check = True
     if not parsed_args['nocompcheck']:
@@ -371,6 +406,9 @@ def check_compliance (image):
                 for hit in failedlist:
                     print "\t\t%s : %s" % ( hit["_source"]["description"], hit["_source"]["reason"] )
                 print LABEL_NO_COLOR + STARS
+                # check if we got back an image id
+                if "nova" in comp_res and "Id" in comp_res["nova"]:
+                    last_image_id = comp_res["nova"]["Id"]
     else:
         # don't check compliance == compliance check complete
         comp_complete = True
@@ -381,6 +419,8 @@ def check_compliance (image):
 # check for completed vulnerability results on an image
 # returns Boolean(complete), Boolean(all passed)
 def check_vulnerabilities (image):
+    global last_image_id
+
     vuln_complete = False
     passed_check = True
     if not parsed_args['novulncheck']:
@@ -417,6 +457,10 @@ def check_vulnerabilities (image):
                 for hit in failedlist:
                     print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
                 print LABEL_NO_COLOR + STARS
+                # check if we got back an image id
+                if "nova" in vuln_res and "Id" in vuln_res["nova"]:
+                    last_image_id = vuln_res["nova"]["Id"]
+
     else:
         # don't check vulnerabilities == vuln check complete
         vuln_complete = True
@@ -426,13 +470,17 @@ def check_vulnerabilities (image):
 
 # get and report results from the listed images, waiting as needed
 def wait_for_image_results (images):
+    global last_image_id
+
     all_passed = True
+    any_passed = False
     time_left = WAIT_TIME
     # check all images
     for image in images:
         LOGGER.info("Running checks on image %s" % str(image))
         comp_complete = False
         vuln_complete = False
+        last_image_id = None
         while (not comp_complete) and (not vuln_complete) and (time_left >= SLEEP_TIME):
             # only check comp if not already complete
             if not comp_complete:
@@ -455,9 +503,26 @@ def wait_for_image_results (images):
         if (not parsed_args['nocompcheck']) and (not comp_complete):
             all_passed = False
             LOGGER.warning( LABEL_COLOR + "no compliance results found for image %s" % str(image) + LABEL_NO_COLOR )
+        else:
+            any_passed = True
         if (not parsed_args['novulncheck']) and (not vuln_complete):
             all_passed = False
             LOGGER.warning( LABEL_COLOR + "no vulnerability results found for image %s" % str(image) + LABEL_NO_COLOR )
+        else:
+            any_passed = True
+
+        # if any of the scans passed, link to the results page
+        if API_SERVER and any_passed:
+            results_url = API_SERVER
+            results_url = results_url.replace ( 'containers-api.', 'vulnerability-advisor.')
+            if not last_image_id:
+                # get the image id
+                last_image_id = get_image_id_for_name( image )
+            if last_image_id:
+                results_url = "%s/vulnerability-advisor/ui/image?id=%s&spaceGuid=%s" % (results_url, last_image_id, SPACE_GUID)
+                LOGGER.info("For a more in-depth review of these results, go to this URL: %s" % results_url)
+            else:
+                LOGGER.debug("Unable to get image id, no URL presented")
 
     return all_passed
 
