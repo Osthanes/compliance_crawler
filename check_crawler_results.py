@@ -277,7 +277,7 @@ def get_image_id_for_name( imagename ):
         'X-Auth-Project-Id': SPACE_GUID
     }
 
-    url = "%s/v3/containers/images/json"
+    url = "%s/v3/containers/images/json" % API_SERVER
     if DEBUG=="1":
         LOGGER.debug("Sending request \"" + str(url) + "\" with headers \"" + str(xheaders) + "\"")
     res = requests.get(url, headers=xheaders)
