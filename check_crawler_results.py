@@ -290,7 +290,7 @@ def get_image_id_for_name( imagename ):
 
     image_list = res.json()
     for image in image_list:
-        if image["Image"] == name:
+        if image["Image"] == imagename:
             if "Id" in image:
                 return image["Id"]
 
