@@ -458,6 +458,11 @@ def check_vulnerabilities (image):
                             summary_failed = hit["_source"]["vulnerable_usns"]
                             if summary_total >= summary_failed:
                                 summary_passed = summary_total - summary_failed
+                        if "vulnerable" in hit["_source"]:
+                            # if vulnerable is set and set to "true", flag
+                            # that the image is vulnerable/failed
+                            if hit["_source"]["vulnerable"]:
+                                passed_check = False
 
                 print STARS
                 # if we have individual results, report those
