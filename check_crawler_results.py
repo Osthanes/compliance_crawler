@@ -402,7 +402,11 @@ def check_compliance (image):
                 if not parsed_args['hidepass']:
                     for hit in goodlist:
                         print "\t\t%s : %s" % ( hit["_source"]["description"], hit["_source"]["reason"] )
-                print LABEL_RED + "\t%d checks failed" % failed
+                if failed == 0:
+                    failed_label = LABEL_GREEN
+                else:
+                    failed_label = LABEL_RED
+                print "%s\t%d checks failed" % (failed_label, failed)
                 for hit in failedlist:
                     print "\t\t%s : %s" % ( hit["_source"]["description"], hit["_source"]["reason"] )
                 print LABEL_NO_COLOR + STARS
@@ -472,14 +476,22 @@ def check_vulnerabilities (image):
                     if not parsed_args['hidepass']:
                         for hit in goodlist:
                             print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
-                    print LABEL_RED + "\t%d checks failed" % failed
+                    if failed == 0:
+                        failed_label = LABEL_GREEN
+                    else:
+                        failed_label = LABEL_RED
+                    print "%s\t%d checks failed" % (failed_label, failed)
                     for hit in failedlist:
                         print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
                 elif summary_total > 0:
                     # if we only have summary results, report those
                     print "image %s vulnerability results found, %d hits" % ( str(image),summary_total )
                     print LABEL_GREEN + "\t%d checks passed" % summary_passed
-                    print LABEL_RED + "\t%d checks failed" % summary_failed
+                    if summary_failed == 0:
+                        failed_label = LABEL_GREEN
+                    else:
+                        failed_label = LABEL_RED
+                    print "%s\t%d checks failed" % (failed_label, summary_failed)
                 print LABEL_NO_COLOR + STARS
                 # check if we got back an image id
                 if "nova" in vuln_res and "Id" in vuln_res["nova"]:
