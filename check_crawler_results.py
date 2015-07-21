@@ -433,29 +433,48 @@ def check_vulnerabilities (image):
                 passed = 0
                 failed = 0
                 total = 0
+                summary_total = 0
+                summary_failed = 0
                 failedlist = []
                 goodlist = []
                 for hit in vuln_res["hits"]["hits"]:
-                    if hit["_source"]["usnid"] in VULN_IDS_TO_IGNORE:
-                        # skip this one
-                        continue
-                    if hit["_source"]["vulnerable"]:
-                        passed_check = False
-                        failed += 1
-                        failedlist.append(hit)
+                    # if this is the summary, may not contain a usnid
+                    if "usnid" in hit["_source"]:
+                        if hit["_source"]["usnid"] in VULN_IDS_TO_IGNORE:
+                            # skip this one
+                            continue
+                        if hit["_source"]["vulnerable"]:
+                            passed_check = False
+                            failed += 1
+                            failedlist.append(hit)
+                        else:
+                            passed += 1
+                            goodlist.append(hit)
                     else:
-                        passed += 1
-                        goodlist.append(hit)
+                        # no usnid, check for summary
+                        if "total_usns_for_distro" in hit["_source"]:
+                            summary_total = hit["_source"]["total_usns_for_distro"]
+                        if "vulnerable_usns" in hit["_source"]:
+                            summary_failed = hit["_source"]["vulnerable_usns"]
+                            if summary_total >= summary_failed:
+                                summary_passed = summary_total - summary_failed
 
                 print STARS
-                print "image %s vulnerability results found, %d hits" % ( str(image),total )
-                print LABEL_GREEN + "\t%d checks passed" % passed
-                if not parsed_args['hidepass']:
-                    for hit in goodlist:
+                # if we have individual results, report those
+                if total > 0:
+                    print "image %s vulnerability results found, %d hits" % ( str(image),total )
+                    print LABEL_GREEN + "\t%d checks passed" % passed
+                    if not parsed_args['hidepass']:
+                        for hit in goodlist:
+                            print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
+                    print LABEL_RED + "\t%d checks failed" % failed
+                    for hit in failedlist:
                         print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
-                print LABEL_RED + "\t%d checks failed" % failed
-                for hit in failedlist:
-                    print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
+                elif summary_total > 0:
+                    # if we only have summary results, report those
+                    print "image %s vulnerability results found, %d hits" % ( str(image),summary_total )
+                    print LABEL_GREEN + "\t%d checks passed" % summary_passed
+                    print LABEL_RED + "\t%d checks failed" % summary_failed
                 print LABEL_NO_COLOR + STARS
                 # check if we got back an image id
                 if "nova" in vuln_res and "Id" in vuln_res["nova"]:
