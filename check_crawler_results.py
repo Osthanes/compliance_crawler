@@ -533,7 +533,7 @@ def wait_for_image_results (images):
         comp_complete = False
         vuln_complete = False
         last_image_id = None
-        while (not comp_complete) and (not vuln_complete) and (time_left >= SLEEP_TIME):
+        while ((not comp_complete) or (not vuln_complete)) and (time_left >= SLEEP_TIME):
             # only check comp if not already complete
             if not comp_complete:
                 comp_complete, passed_check = check_compliance(image)
