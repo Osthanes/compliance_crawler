@@ -149,10 +149,6 @@ def parse_args ():
     image_name = os.environ.get('IMAGE_NAME')
     if image_name:
         parsed_args['images'].append(image_name)
-    # check for docker_build full env var, too
-    image_name = os.environ.get('FULL_REPOSITORY_NAME')
-    if image_name:
-        parsed_args['images'].append(image_name)
     call_direct_env = os.environ.get('CC_CALLDIRECT')
     if call_direct_env:
         # call direct mode - bypass the api server and go straight to the crawler server

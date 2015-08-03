@@ -58,10 +58,15 @@ if [ -z $IMAGE_NAME ]; then
         echo "IMAGE_NAME: $IMAGE_NAME"
     fi  
     if [ -z $IMAGE_NAME ]; then
-        echo -e "${red}IMAGE_NAME not set. Set the IMAGE_NAME in the environment or provide a Docker build job as input to this deploy job. ${no_color}" | tee -a "$ERROR_LOG_FILE"
-        echo -e "${red}If there was a recent change to the pipeline, such as deleting or moving a job or stage, check that the input to this and other later stages is still set to the correct build stage and job ${no_color}" | tee -a "$ERROR_LOG_FILE"
-        ${EXT_DIR}/print_help.sh
-        exit 1
+        if [ -n $FULL_REPOSITORY_NAME ]; then 
+            export IMAGE_NAME=$FULL_REPOSITORY_NAME
+        fi
+        if [ -z $IMAGE_NAME ]; then
+            echo -e "${red}IMAGE_NAME not set. Set the IMAGE_NAME in the environment or provide a Docker build job as input to this deploy job. ${no_color}" | tee -a "$ERROR_LOG_FILE"
+            echo -e "${red}If there was a recent change to the pipeline, such as deleting or moving a job or stage, check that the input to this and other later stages is still set to the correct build stage and job ${no_color}" | tee -a "$ERROR_LOG_FILE"
+            ${EXT_DIR}/print_help.sh
+            exit 1
+        fi
     fi 
 else 
     echo -e "${label_color}Image being overridden by the environment. Using ${IMAGE_NAME} ${no_color}"
