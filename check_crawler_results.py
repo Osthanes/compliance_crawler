@@ -26,13 +26,7 @@ import time
 import timeit
 from datetime import datetime
 from subprocess import Popen, PIPE
-
-# ascii color codes for output
-LABEL_GREEN='\033[0;32m'
-LABEL_RED='\033[0;31m'
-LABEL_COLOR='\033[0;33m'
-LABEL_NO_COLOR='\033[0m'
-STARS="**********************************************************************"
+import python_utils
 
 # base locations to get the info
 CALL_VIA_API=True
@@ -58,13 +52,8 @@ SPACE_GUID=""
 # last image checked
 last_image_id=None
 
-DEBUG=os.environ.get('DEBUG')
 # time to sleep between checks when waiting on pending jobs, in seconds
 SLEEP_TIME=30
-
-SCRIPT_START_TIME = timeit.default_timer()
-LOGGER = None
-WAIT_TIME = 0
 
 # load bearer token and space guid from ~/.cf/config.json
 def load_cf_auth_info ():
@@ -90,7 +79,7 @@ def find_ice_api_server ():
 
     if proc.returncode != 0:
         msg = "Error: Unable to find api server, rc was " + str(proc.returncode)
-        LOGGER.error(msg)
+        python_utils.LOGGER.error(msg)
         raise Exception(msg)
 
     # cf api output comes back in the form:
@@ -102,12 +91,12 @@ def find_ice_api_server ():
             API_SERVER=word
     # point to ice server, not cf server
     API_SERVER = API_SERVER.replace ( 'api.', 'containers-api.')
-    if DEBUG=="1":
-        LOGGER.debug("API SERVER set to " + str(API_SERVER))
+    if python_utils.DEBUG=="1":
+        python_utils.LOGGER.debug("API SERVER set to " + str(API_SERVER))
 
 # check cli args, set globals appropriately
 def parse_args ():
-    global LOGGER, WAIT_TIME, VULN_BASE_URL, COMP_BASE_URL, API_SERVER, CRAWLER_SERVER, DEBUG, CALL_VIA_API
+    global VULN_BASE_URL, COMP_BASE_URL, API_SERVER, CRAWLER_SERVER, CALL_VIA_API
     parsed_args = {}
     parsed_args['nocompcheck'] = False
     parsed_args['novulncheck'] = False
@@ -135,9 +124,9 @@ def parse_args ():
             # don't print checks that passed
             parsed_args['hidepass'] = True
         if arg == "--debug":
-            # enable debug mode, can also be done with DEBUG env var
+            # enable debug mode, can also be done with python_utils.DEBUG env var
             parsed_args['debug'] = True
-            DEBUG = "1"
+            python_utils.DEBUG = "1"
         if arg == "--help":
             # just print help and return
             parsed_args['help'] = True
@@ -155,20 +144,20 @@ def parse_args ():
         parsed_args['calldirect'] = True
         CALL_VIA_API = False
 
-    LOGGER = setup_logging()
+    python_utils.LOGGER = python_utils.setup_logging()
 
     # set up the server urls
     if CALL_VIA_API:
         find_ice_api_server()
         if not API_SERVER:
             msg = "Cannot determine correct api server, unable to place queries"
-            LOGGER.error( msg )
+            python_utils.LOGGER.error( msg )
             raise Exception( msg )
     else:
         CRAWLER_SERVER = os.environ.get('CRAWLER_SERVER')
         if not CRAWLER_SERVER:
             msg = "CRAWLER_SERVER is not set, unable to place queries"
-            LOGGER.error( msg )
+            python_utils.LOGGER.error( msg )
             raise Exception( msg )
         VULN_BASE_URL=VULN_BASE_TEMPLATE % CRAWLER_SERVER
         COMP_BASE_URL=COMP_BASE_TEMPLATE % CRAWLER_SERVER
@@ -177,7 +166,7 @@ def parse_args ():
     load_cf_auth_info()
 
     # see how much time we have left after completing init
-    WAIT_TIME = get_remaining_wait_time(first = True)
+    python_utils.WAIT_TIME = python_utils.get_remaining_wait_time(first = True)
 
     return parsed_args
 
@@ -203,69 +192,6 @@ def print_help ():
     print
 
 
-# setup logmet logging connection if it's available
-def setup_logging ():
-    logger = logging.getLogger('pipeline')
-    if DEBUG:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
-
-    # if logmet is enabled, send the log through syslog as well
-    if os.environ.get('LOGMET_LOGGING_ENABLED'):
-        handler = logging.handlers.SysLogHandler(address='/dev/log')
-        logger.addHandler(handler)
-        # don't send debug info through syslog
-        handler.setLevel(logging.INFO)
-
-    # in any case, dump logging to the screen
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    if DEBUG:
-        handler.setLevel(logging.DEBUG)
-    else:
-        handler.setLevel(logging.INFO)
-    logger.addHandler(handler)
-    
-    return logger
-
-# return the remaining time to wait
-# first time, will prime from env var and subtract init script time 
-#
-# return is the expected max time left in seconds we're allowed to wait
-# for pending jobs to complete
-def get_remaining_wait_time (first = False):
-    if first:
-        # first time through, set up the var from env
-        try:
-            time_to_wait = int(os.getenv('WAIT_TIME', "5")) * 60
-        except ValueError:
-            time_to_wait = 300
-
-        # and (if not 0) subtract out init time
-        if time_to_wait != 0:
-            try:
-                initTime = int(os.getenv("INT_EST_TIME", "0"))
-            except ValueError:
-                initTime = 0
-
-            time_to_wait -= initTime
-    else:
-        # just get the initial start time
-        time_to_wait = WAIT_TIME
-
-    # if no time to wait, no point subtracting anything
-    if time_to_wait != 0:
-        time_so_far = int(timeit.default_timer() - SCRIPT_START_TIME)
-        time_to_wait -= time_so_far
-
-    # can't wait negative time, fix it
-    if time_to_wait < 0:
-        time_to_wait = 0
-
-    return time_to_wait
-
 # given an image name, get the id for it
 def get_image_id_for_name( imagename ):
     if not imagename:
@@ -278,12 +204,12 @@ def get_image_id_for_name( imagename ):
     }
 
     url = "%s/v3/containers/images/json" % API_SERVER
-    if DEBUG=="1":
-        LOGGER.debug("Sending request \"" + str(url) + "\" with headers \"" + str(xheaders) + "\"")
+    if python_utils.DEBUG=="1":
+        python_utils.LOGGER.debug("Sending request \"" + str(url) + "\" with headers \"" + str(xheaders) + "\"")
     res = requests.get(url, headers=xheaders)
 
-    if DEBUG=="1":
-        LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
+    if python_utils.DEBUG=="1":
+        python_utils.LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
 
     if res.status_code != 200:
         return None
@@ -315,12 +241,12 @@ def get_vuln_info ( imagename ):
         url = VULN_BASE_URL
         body = BODY_TEMPLATE % imagename
 
-    if DEBUG=="1":
-        LOGGER.debug("Sending request \"" + str(url) + "\" with body \"" + str(body) + "\" and headers \"" + str(xheaders) + "\"")
+    if python_utils.DEBUG=="1":
+        python_utils.LOGGER.debug("Sending request \"" + str(url) + "\" with body \"" + str(body) + "\" and headers \"" + str(xheaders) + "\"")
     res = requests.post(url, data=body, headers=xheaders)
 
-    if DEBUG=="1":
-        LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
+    if python_utils.DEBUG=="1":
+        python_utils.LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
 
     if res.status_code != 200:
         if res.status_code == 401:
@@ -349,12 +275,12 @@ def get_comp_info ( imagename ):
         url = COMP_BASE_URL
         body = BODY_TEMPLATE % imagename
 
-    if DEBUG=="1":
-        LOGGER.debug("Sending request \"" + str(url) + "\" with body \"" + str(body) + "\" and headers \"" + str(xheaders) + "\"")
+    if python_utils.DEBUG=="1":
+        python_utils.LOGGER.debug("Sending request \"" + str(url) + "\" with body \"" + str(body) + "\" and headers \"" + str(xheaders) + "\"")
     res = requests.post(url, data=body, headers=xheaders)
 
-    if DEBUG=="1":
-        LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
+    if python_utils.DEBUG=="1":
+        python_utils.LOGGER.debug("received status " + str(res.status_code) + " and data " + str(res.text))
 
     if res.status_code != 200:
         if res.status_code == 401:
@@ -396,20 +322,20 @@ def check_compliance (image):
                         passed += 1
                         goodlist.append(hit)
 
-                print STARS
+                print python_utils.STARS
                 print "image %s compliance results found, %d hits" % ( str(image),total )
-                print LABEL_GREEN + "\t%d checks passed" % passed
+                print python_utils.LABEL_GREEN + "\t%d checks passed" % passed
                 if not parsed_args['hidepass']:
                     for hit in goodlist:
                         print "\t\t%s : %s" % ( hit["_source"]["description"], hit["_source"]["reason"] )
                 if failed == 0:
-                    failed_label = LABEL_GREEN
+                    failed_label = python_utils.LABEL_GREEN
                 else:
-                    failed_label = LABEL_RED
+                    failed_label = python_utils.LABEL_RED
                 print "%s\t%d checks failed" % (failed_label, failed)
                 for hit in failedlist:
                     print "\t\t%s : %s" % ( hit["_source"]["description"], hit["_source"]["reason"] )
-                print LABEL_NO_COLOR + STARS
+                print python_utils.LABEL_NO_COLOR + python_utils.STARS
                 # check if we got back an image id
                 if "nova" in comp_res and "Id" in comp_res["nova"]:
                     last_image_id = comp_res["nova"]["Id"]
@@ -474,41 +400,41 @@ def check_vulnerabilities (image):
                             if hit["_source"]["vulnerable"]:
                                 passed_check = False
 
-                print STARS
+                print python_utils.STARS
                 # if we have individual results, report those
                 if (total_packages != -1) and (vulnerable_packages != -1):
                     print "image %s vulnerability results found" % str(image)
-                    print LABEL_GREEN + "\t%d packages scanned" % total_packages
+                    print python_utils.LABEL_GREEN + "\t%d packages scanned" % total_packages
                     if vulnerable_packages == 0:
-                        failed_label = LABEL_GREEN
+                        failed_label = python_utils.LABEL_GREEN
                     else:
-                        failed_label = LABEL_RED
+                        failed_label = python_utils.LABEL_RED
                     print "%s\t%d vulnerable packages" % (failed_label, vulnerable_packages)
                     for hit in failedlist:
                         print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
                 elif total > 0:
                     print "image %s vulnerability results found, %d hits" % ( str(image),total )
-                    print LABEL_GREEN + "\t%d checks passed" % passed
+                    print python_utils.LABEL_GREEN + "\t%d checks passed" % passed
                     if not parsed_args['hidepass']:
                         for hit in goodlist:
                             print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
                     if failed == 0:
-                        failed_label = LABEL_GREEN
+                        failed_label = python_utils.LABEL_GREEN
                     else:
-                        failed_label = LABEL_RED
+                        failed_label = python_utils.LABEL_RED
                     print "%s\t%d checks failed" % (failed_label, failed)
                     for hit in failedlist:
                         print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
                 elif summary_total > 0:
                     # if we only have summary results, report those
                     print "image %s vulnerability results found, %d hits" % ( str(image),summary_total )
-                    print LABEL_GREEN + "\t%d checks passed" % summary_passed
+                    print python_utils.LABEL_GREEN + "\t%d checks passed" % summary_passed
                     if summary_failed == 0:
-                        failed_label = LABEL_GREEN
+                        failed_label = python_utils.LABEL_GREEN
                     else:
-                        failed_label = LABEL_RED
+                        failed_label = python_utils.LABEL_RED
                     print "%s\t%d checks failed" % (failed_label, summary_failed)
-                print LABEL_NO_COLOR + STARS
+                print python_utils.LABEL_NO_COLOR + python_utils.STARS
                 # check if we got back an image id
                 if "nova" in vuln_res and "Id" in vuln_res["nova"]:
                     last_image_id = vuln_res["nova"]["Id"]
@@ -526,10 +452,10 @@ def wait_for_image_results (images):
 
     all_passed = True
     any_passed = False
-    time_left = WAIT_TIME
+    time_left = python_utils.WAIT_TIME
     # check all images
     for image in images:
-        LOGGER.info("Running checks on image %s" % str(image))
+        python_utils.LOGGER.info("Running checks on image %s" % str(image))
         comp_complete = False
         vuln_complete = False
         last_image_id = None
@@ -546,20 +472,20 @@ def wait_for_image_results (images):
                 # if this check completed, and it didn't pass, mark that not all passed
                 if vuln_complete and (not passed_check):
                     all_passed = False
-            time_left = get_remaining_wait_time()
+            time_left = python_utils.get_remaining_wait_time()
             if ((not comp_complete) or (not vuln_complete)) and (time_left >= SLEEP_TIME):
-                LOGGER.info( "waiting for results for image %s" % str(image) )
+                python_utils.LOGGER.info( "waiting for results for image %s" % str(image) )
                 time.sleep(SLEEP_TIME)
 
         # if no results found for a given image, display that
         if (not parsed_args['nocompcheck']) and (not comp_complete):
             all_passed = False
-            LOGGER.warning( LABEL_COLOR + "no compliance results found for image %s" % str(image) + LABEL_NO_COLOR )
+            python_utils.LOGGER.warning( python_utils.LABEL_COLOR + "no compliance results found for image %s" % str(image) + python_utils.LABEL_NO_COLOR       )
         else:
             any_passed = True
         if (not parsed_args['novulncheck']) and (not vuln_complete):
             all_passed = False
-            LOGGER.warning( LABEL_COLOR + "no vulnerability results found for image %s" % str(image) + LABEL_NO_COLOR )
+            python_utils.LOGGER.warning( python_utils.LABEL_COLOR + "no vulnerability results found for image %s" % str(image) + python_utils.LABEL_NO_COLOR       )
         else:
             any_passed = True
 
@@ -572,9 +498,9 @@ def wait_for_image_results (images):
                 last_image_id = get_image_id_for_name( image )
             if last_image_id:
                 results_url = "%s/vulnerability-advisor/ui/image?id=%s&spaceGuid=%s" % (results_url, last_image_id, SPACE_GUID)
-                LOGGER.info("For a more in-depth review of these results, go to this URL: %s" % results_url)
+                python_utils.LOGGER.info("For a more in-depth review of these results, go to this URL: %s" % results_url)
             else:
-                LOGGER.debug("Unable to get image id, no URL presented")
+                python_utils.LOGGER.debug("Unable to get image id, no URL presented")
 
     return all_passed
 
@@ -589,7 +515,7 @@ try:
         sys.exit(0)
 
     if not parsed_args['images']:
-        LOGGER.error( "Error: No image names passed for validation." )
+        python_utils.LOGGER.error( "Error: No image names passed for validation." )
         print
         print_help()
         sys.exit(1)
@@ -598,15 +524,15 @@ try:
     all_passed = wait_for_image_results( parsed_args['images'] )
 
     endtime = timeit.default_timer()
-    print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+    print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
     if not all_passed:
         sys.exit(1)
     sys.exit(0)
 
 except Exception, e:
-    LOGGER.warning("Execution failed - error was: " +  str(e))
-    LOGGER.debug("Exception received", exc_info=e)
+    python_utils.LOGGER.warning("Execution failed - error was: " +  str(e))
+    python_utils.LOGGER.debug("Exception received", exc_info=e)
     endtime = timeit.default_timer()
-    print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+    print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
     sys.exit(1)
 
