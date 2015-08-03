@@ -437,6 +437,8 @@ def check_vulnerabilities (image):
                 passed = 0
                 failed = 0
                 total = 0
+                total_packages = -1
+                vulnerable_packages = -1
                 summary_total = 0
                 summary_failed = 0
                 failedlist = []
@@ -462,6 +464,10 @@ def check_vulnerabilities (image):
                             summary_failed = hit["_source"]["vulnerable_usns"]
                             if summary_total >= summary_failed:
                                 summary_passed = summary_total - summary_failed
+                        if "total_packages" in hit["_source"]:
+                            total_packages = hit["_source"]["total_packages"]
+                        if "vulnerable_packages" in hit["_source"]:
+                            vulnerable_packages = hit["_source"]["vulnerable_packages"]
                         if "vulnerable" in hit["_source"]:
                             # if vulnerable is set and set to "true", flag
                             # that the image is vulnerable/failed
@@ -470,7 +476,17 @@ def check_vulnerabilities (image):
 
                 print STARS
                 # if we have individual results, report those
-                if total > 0:
+                if (total_packages != -1) and (vulnerable_packages != -1):
+                    print "image %s vulnerability results found" % str(image)
+                    print LABEL_GREEN + "\t%d packages scanned" % total_packages
+                    if vulnerable_packages == 0:
+                        failed_label = LABEL_GREEN
+                    else:
+                        failed_label = LABEL_RED
+                    print "%s\t%d vulnerable packages" % (failed_label, vulnerable_packages)
+                    for hit in failedlist:
+                        print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
+                elif total > 0:
                     print "image %s vulnerability results found, %d hits" % ( str(image),total )
                     print LABEL_GREEN + "\t%d checks passed" % passed
                     if not parsed_args['hidepass']:
