@@ -38,6 +38,7 @@ VULN_BASE_URL=""
 COMP_BASE_URL=""
 BODY_TEMPLATE="{ \"query\": { \"bool\":{ \"must\": [ { \"match_phrase_prefix\": { \"namespace.raw\" : \"%s\" } } ] } }, \"size\":\"100\" }"
 API_BODY_TEMPLATE="{ \"name\": \"%s\" }"
+CF_API_SERVER=""
 API_SERVER=""
 CRAWLER_SERVER=""
 
@@ -55,48 +56,11 @@ last_image_id=None
 # time to sleep between checks when waiting on pending jobs, in seconds
 SLEEP_TIME=30
 
-# load bearer token and space guid from ~/.cf/config.json
-def load_cf_auth_info ():
-    global BEARER_TOKEN, SPACE_GUID
-
-    cf_filename = "%s/.cf/config.json" % os.path.expanduser("~")
-
-    with open( cf_filename ) as cf_config_file:
-        config_info = json.load(cf_config_file)
-        BEARER_TOKEN = config_info["AccessToken"]
-        if BEARER_TOKEN.lower().startswith("bearer "):
-            BEARER_TOKEN=BEARER_TOKEN[7:]
-        SPACE_GUID = config_info["SpaceFields"]["Guid"]
-
-# check with cf to find the api server, adjust to find the
-# ICE api server
-def find_ice_api_server ():
-    global API_SERVER
-
-    command = "cf api"
-    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
-    out, err = proc.communicate();
-
-    if proc.returncode != 0:
-        msg = "Error: Unable to find api server, rc was " + str(proc.returncode)
-        python_utils.LOGGER.error(msg)
-        raise Exception(msg)
-
-    # cf api output comes back in the form:
-    # API endpoint: https://api.ng.bluemix.net (API version: 2.23.0)
-    # so take out just the part we need
-    words = out.split()
-    for word in words:
-        if word.startswith("https://"):
-            API_SERVER=word
-    # point to ice server, not cf server
-    API_SERVER = API_SERVER.replace ( 'api.', 'containers-api.')
-    if python_utils.DEBUG=="1":
-        python_utils.LOGGER.debug("API SERVER set to " + str(API_SERVER))
-
 # check cli args, set globals appropriately
 def parse_args ():
     global VULN_BASE_URL, COMP_BASE_URL, API_SERVER, CRAWLER_SERVER, CALL_VIA_API
+    global BEARER_TOKEN, SPACE_GUID
+    global CF_API_SERVER, API_SERVER
     parsed_args = {}
     parsed_args['nocompcheck'] = False
     parsed_args['novulncheck'] = False
@@ -148,7 +112,7 @@ def parse_args ():
 
     # set up the server urls
     if CALL_VIA_API:
-        find_ice_api_server()
+        CF_API_SERVER, API_SERVER = python_utils.find_api_servers()
         if not API_SERVER:
             msg = "Cannot determine correct api server, unable to place queries"
             python_utils.LOGGER.error( msg )
@@ -163,7 +127,7 @@ def parse_args ():
         COMP_BASE_URL=COMP_BASE_TEMPLATE % CRAWLER_SERVER
 
     # load creds
-    load_cf_auth_info()
+    BEARER_TOKEN, SPACE_GUID = python_utils.load_cf_auth_info()
 
     # see how much time we have left after completing init
     python_utils.WAIT_TIME = python_utils.get_remaining_wait_time(first = True)
