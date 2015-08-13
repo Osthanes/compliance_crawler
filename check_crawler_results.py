@@ -44,7 +44,6 @@ CRAWLER_SERVER=""
 
 # compliance IDs to skip (don't need to report the "summary" id as a separate result)
 COMP_IDS_TO_IGNORE=["Linux.0-0-a"]
-VULN_IDS_TO_IGNORE=[]
 
 # call information for authentication
 BEARER_TOKEN=""
@@ -267,16 +266,42 @@ def check_compliance (image):
             if comp_res["hits"]["total"] > 0:
                 # got results, mark compliance check complete
                 comp_complete = True
+                # first filter to keep only latest test result for each test
+                checkedlist = {}
+                for hit in comp_res["hits"]["hits"]:
+                    hit_id = hit["_source"]["compliance_id"]
+                    if hit_id in COMP_IDS_TO_IGNORE:
+                        # skip this one
+                        continue
+                    # only want to show the latest result for a given test for
+                    # each image
+                    if hit_id in checkedlist:
+                        oldhit = checkedlist[hit_id]
+                        # keep only the latest result
+                        try:
+                            newtime = datetime.strptime(hit["_source"]["@timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                        except Exception:
+                            newtime = None
+                        try:
+                            oldtime = datetime.strptime(oldhit["_source"]["@timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                        except Exception:
+                            oldtime = None
+                        if newtime:
+                            if (not oldtime) or oldtime<newtime:
+                                # if the new one is newer, or old one has no timestamp,
+                                # save the new one (replace previous)
+                                checkedlist[hit_id] = hit
+                    else:
+                        checkedlist[hit_id] = hit
+
+                # now run a count to get passed/failed/etc
                 # clear result counts
                 passed = 0
                 failed = 0
                 total = 0
                 failedlist = []
                 goodlist = []
-                for hit in comp_res["hits"]["hits"]:
-                    if hit["_source"]["compliance_id"] in COMP_IDS_TO_IGNORE:
-                        # skip this one
-                        continue
+                for key, hit in checkedlist.iteritems():
                     total += 1
                     if hit["_source"]["compliant"] == "false":
                         passed_check = False
@@ -323,6 +348,36 @@ def check_vulnerabilities (image):
             if vuln_res["hits"]["total"] > 0:
                 # got results, mark vulnerability check complete
                 vuln_complete = True
+                # first filter to keep only latest test result for each test
+                checkedlist = {}
+                for hit in vuln_res["hits"]["hits"]:
+                    if "total_usns_for_distro" in hit["_source"]:
+                        # this is a summary hit
+                        hit_id = "summary"
+                    else:
+                        # this is a vuln hit
+                        hit_id = hit["_source"]["package_name"]
+                    # only want to show the latest result for a given test for
+                    # each image
+                    if hit_id in checkedlist:
+                        oldhit = checkedlist[hit_id]
+                        # keep only the latest result
+                        try:
+                            newtime = datetime.strptime(hit["_source"]["@timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                        except Exception:
+                            newtime = None
+                        try:
+                            oldtime = datetime.strptime(oldhit["_source"]["@timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                        except Exception:
+                            oldtime = None
+                        if newtime:
+                            if (not oldtime) or oldtime<newtime:
+                                # if the new one is newer, or old one has no timestamp,
+                                # save the new one (replace previous)
+                                checkedlist[hit_id] = hit
+                    else:
+                        checkedlist[hit_id] = hit
+
                 # clear results totals
                 passed = 0
                 failed = 0
@@ -333,23 +388,10 @@ def check_vulnerabilities (image):
                 summary_failed = 0
                 failedlist = []
                 goodlist = []
-                for hit in vuln_res["hits"]["hits"]:
+                for key, hit in checkedlist.iteritems():
                     # if this is the summary, may not contain a usnid
-                    if "usnid" in hit["_source"]:
-                        if hit["_source"]["usnid"] in VULN_IDS_TO_IGNORE:
-                            # skip this one
-                            continue
-                        if hit["_source"]["vulnerable"]:
-                            passed_check = False
-                            failed += 1
-                            failedlist.append(hit)
-                        else:
-                            passed += 1
-                            goodlist.append(hit)
-                    else:
-                        # no usnid, check for summary
-                        if "total_usns_for_distro" in hit["_source"]:
-                            summary_total = hit["_source"]["total_usns_for_distro"]
+                    if "total_usns_for_distro" in hit["_source"]:
+                        summary_total = hit["_source"]["total_usns_for_distro"]
                         if "vulnerable_usns" in hit["_source"]:
                             summary_failed = hit["_source"]["vulnerable_usns"]
                             if summary_total >= summary_failed:
@@ -363,6 +405,14 @@ def check_vulnerabilities (image):
                             # that the image is vulnerable/failed
                             if hit["_source"]["vulnerable"]:
                                 passed_check = False
+                    else:
+                        if hit["_source"]["vulnerable"]:
+                            passed_check = False
+                            failed += 1
+                            failedlist.append(hit)
+                        else:
+                            passed += 1
+                            goodlist.append(hit)
 
                 print python_utils.STARS
                 # if we have individual results, report those
@@ -375,20 +425,22 @@ def check_vulnerabilities (image):
                         failed_label = python_utils.LABEL_RED
                     print "%s\t%d vulnerable packages" % (failed_label, vulnerable_packages)
                     for hit in failedlist:
-                        print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
+                        if "package_name" in hit["_source"]:
+                            print "\t\t%s : current: %s  fixed: %s" % ( hit["_source"]["package_name"], hit["_source"]["current_version"], hit["_source"]["fix_version"] )
                 elif total > 0:
                     print "image %s vulnerability results found, %d hits" % ( str(image),total )
                     print python_utils.LABEL_GREEN + "\t%d checks passed" % passed
                     if not parsed_args['hidepass']:
                         for hit in goodlist:
-                            print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
+                            print "\t\t%s" % ( hit["_source"]["package_name"] )
                     if failed == 0:
                         failed_label = python_utils.LABEL_GREEN
                     else:
                         failed_label = python_utils.LABEL_RED
                     print "%s\t%d checks failed" % (failed_label, failed)
                     for hit in failedlist:
-                        print "\t\t%s : %s" % ( hit["_source"]["usnid"], hit["_source"]["summary"] )
+                        if "package_name" in hit["_source"]:
+                            print "\t\t%s : current: %s  fixed: %s" % ( hit["_source"]["package_name"], hit["_source"]["current_version"], hit["_source"]["fix_version"] )
                 elif summary_total > 0:
                     # if we only have summary results, report those
                     print "image %s vulnerability results found, %d hits" % ( str(image),summary_total )
