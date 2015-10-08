@@ -12,12 +12,12 @@
 				{
 					"eval": "filecontents.hits.hits._source.compliant",
 					"op": "=",
-					"value": "true"
+					"value": true
 				},
 				{
 					"eval": "filecontents.compliance.timed_out",
 					"op": "=",
-					"value": "false"
+					"value": false
 				}
 			]
 		},
@@ -28,12 +28,12 @@
 				{
 					"eval": "filecontents.hits.hits._source.vulnerable",
 					"op": "=",
-					"value": "false"
+					"value": false
 				},
 				{
 					"eval": "filecontents.vulnerability.timed_out",
 					"op": "=",
-					"value": "false"
+					"value": false
 				}
 
 			]
