@@ -18,7 +18,7 @@
 					"eval": "filecontents.compliance.timed_out",
 					"op": "=",
 					"value": "false"
-				},
+				}
 			]
 		},
 		{
@@ -34,7 +34,7 @@
 					"eval": "filecontents.vulnerability.timed_out",
 					"op": "=",
 					"value": "false"
-				},
+				}
 
 			]
 		}
