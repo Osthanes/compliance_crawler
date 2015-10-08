@@ -208,8 +208,27 @@ cd $EXT_DIR
 git clone https://github.com/Osthanes/utilities.git utilities
 export PYTHONPATH=$EXT_DIR/utilities:$PYTHONPATH
 popd >/dev/null
-# enable logging to logmet
+
+############################
+# enable logging to logmet #
+############################
 source $EXT_DIR/utilities/logging_utils.sh
-setup_met_logging "${BLUEMIX_USER}" "${BLUEMIX_PASSWORD}" "${BLUEMIX_SPACE}" "${BLUEMIX_ORG}" "${BLUEMIX_TARGET}"
+setup_met_logging "${BLUEMIX_USER}" "${BLUEMIX_PASSWORD}"
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+    log_and_echo "$WARN" "LOGMET setup failed with return code ${RESULT}"
+fi
+
+############################
+# enable DRA               #
+############################source $EXT_DIR/utilities/dra_utils.sh
+export DRA_ENABLED=1
+export CRITERIAL_NAME="compliance_criterial"
+setup_dra "${CRITERIAL_NAME}"
+if [ $RESULT -eq 0 ]; then
+    log_and_echo "Successfully Setup DRA for criterial name '${CRITERIAL_NAME}'."
+elif [ $RESULT -gt 1 ]; then
+    log_and_echo "$WARN" "Failed to setup DRA for criterial name '${CRITERIAL_NAME}'."
+fi
 
 echo -e "${label_color}Initialization complete${no_color}"

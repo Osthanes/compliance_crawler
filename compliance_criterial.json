@@ -1,0 +1,42 @@
+{
+	"name": "compliance_criterial",
+	"revision": 2,
+	"project": "key",
+	"mode": "decision",
+	"rules":
+	[
+		{
+			"name": "compliance",
+			"conditions":
+			[
+				{
+					"eval": "filecontents.hits.hits._source.compliant",
+					"op": "=",
+					"value": "true"
+				},
+				{
+					"eval": "filecontents.compliance.timed_out",
+					"op": "=",
+					"value": "false"
+				},
+			]
+		},
+		{
+			"name": "vulnerability",
+			"conditions":
+			[
+				{
+					"eval": "filecontents.hits.hits._source.vulnerable",
+					"op": "=",
+					"value": "false"
+				},
+				{
+					"eval": "filecontents.vulnerability.timed_out",
+					"op": "=",
+					"value": "false"
+				},
+
+			]
+		}
+	]
+}

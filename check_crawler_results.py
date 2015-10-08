@@ -55,6 +55,9 @@ last_image_id=None
 # time to sleep between checks when waiting on pending jobs, in seconds
 SLEEP_TIME=30
 
+# compliance and vulnerability results
+compliance_result = {}
+
 # check cli args, set globals appropriately
 def parse_args ():
     global VULN_BASE_URL, COMP_BASE_URL, API_SERVER, CRAWLER_SERVER, CALL_VIA_API
@@ -257,6 +260,7 @@ def get_comp_info ( imagename ):
 # returns Boolean(complete), Boolean(all passed)
 def check_compliance (image):
     global last_image_id
+    global compliance_result
 
     comp_complete = False
     passed_check = True
@@ -328,6 +332,8 @@ def check_compliance (image):
                 # check if we got back an image id
                 if "nova" in comp_res and "Id" in comp_res["nova"]:
                     last_image_id = comp_res["nova"]["Id"]
+                compliance_result.update({'compliance': comp_res})
+
     else:
         # don't check compliance == compliance check complete
         comp_complete = True
@@ -339,6 +345,7 @@ def check_compliance (image):
 # returns Boolean(complete), Boolean(all passed)
 def check_vulnerabilities (image):
     global last_image_id
+    global compliance_result
 
     vuln_complete = False
     passed_check = True
@@ -454,6 +461,7 @@ def check_vulnerabilities (image):
                 # check if we got back an image id
                 if "nova" in vuln_res and "Id" in vuln_res["nova"]:
                     last_image_id = vuln_res["nova"]["Id"]
+                compliance_result.update({'vulnerability': vuln_res})
 
     else:
         # don't check vulnerabilities == vuln check complete
@@ -492,6 +500,7 @@ def wait_for_image_results (images):
             if ((not comp_complete) or (not vuln_complete)) and (time_left >= SLEEP_TIME):
                 python_utils.LOGGER.info( "waiting for results for image %s" % str(image) )
                 time.sleep(SLEEP_TIME)
+
 
         # if no results found for a given image, display that
         if (not parsed_args['nocompcheck']) and (not comp_complete):
@@ -538,6 +547,12 @@ try:
 
     # check the images, wait until done (or timeout)
     all_passed = wait_for_image_results( parsed_args['images'] )
+
+    # generate compliance-result.json file
+    if compliance_result:
+        compliance_result_file = './compliance-result.json'
+        with open(compliance_result_file, 'w') as outfile:
+            json.dump(compliance_result, outfile, sort_keys = True)
 
     endtime = timeit.default_timer()
     print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
