@@ -221,7 +221,8 @@ fi
 
 ############################
 # enable DRA               #
-############################source $EXT_DIR/utilities/dra_utils.sh
+############################
+source $EXT_DIR/utilities/dra_utils.sh
 export DRA_ENABLED=1
 export CRITERIAL_NAME="compliance_criterial"
 setup_dra "${CRITERIAL_NAME}"
