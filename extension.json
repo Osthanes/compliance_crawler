@@ -63,7 +63,7 @@ if [ -f ${EXT_DIR}/check_crawler_results.py ]; then
     # add the appscan result json file to DRA
     if [ $DRA_ENABLED -eq 0 ]; then
         RESULT_FILE=\"compliance-result.json\"
-        if [ -e \"$COMP_RESULT_FILE\" ]; then
+        if [ -e \"$RESULT_FILE\" ]; then
             add_result_rule_to_dra \"${RESULT_FILE}\"
             RC=$?
             if [ $RC -eq 0 ]; then
@@ -83,7 +83,7 @@ if [ -f ${EXT_DIR}/check_crawler_results.py ]; then
                 echo -e \"${label_color}Failed to add result rule file ${RESULT_FILE} to DRA with return error code ${RC}.${no_color}\"
             fi
         else
-            echo -e \"${label_color}Failed to get result rule file ${RESULT_FILE} or DRA is not enabled (DRA_ENABLED = ${DRA_ENABLED}.${no_color}\"
+            echo -e \"${label_color}Failed to get result rule file ${RESULT_FILE}.${no_color}\"
         fi
     fi
 
