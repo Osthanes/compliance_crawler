@@ -13,8 +13,8 @@
 					"eval": "filecontents.hits.hits.*._source.compliant",
 					"op": "=",
 					"value": "true",
-					"report_type": "attributes",
-					"report_attributes":
+					"reportType": "Attributes",
+					"reportAttributes":
 					[
 						 "filecontents.hits.hits.*._source.description",
 						 "filecontents.hits.hits.*._source.reason"
@@ -23,13 +23,7 @@
 				{
 					"eval": "filecontents.compliance.timed_out",
 					"op": "=",
-					"value": false,
-					"report_type": "attributes",
-					"report_attributes":
-					[
-						 "filecontents.hits.hits.*._source.description",
-						 "filecontents.hits.hits.*._source.reason"
-					]
+					"value": false
 				}
 			]
 		},
@@ -41,8 +35,8 @@
 					"eval": "filecontents.hits.hits.*._source.vulnerable",
 					"op": "=",
 					"value": false,
-					"report_type": "attributes",
-					"report_attributes":
+					"reportType": "Attributes",
+					"reportAttributes":
 					[
 						 "filecontents.hits.hits.*._source.namespace"
 					]
@@ -50,12 +44,7 @@
 				{
 					"eval": "filecontents.vulnerability.timed_out",
 					"op": "=",
-					"value": false,
-					"report_type": "attributes",
-					"report_attributes":
-					[
-						 "filecontents.hits.hits.*._source.namespace"
-					]					
+					"value": false				
 				}
 
 			]
