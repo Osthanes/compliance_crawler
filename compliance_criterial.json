@@ -10,14 +10,26 @@
 			"conditions":
 			[
 				{
-					"eval": "filecontents.hits.hits._source.compliant",
+					"eval": "filecontents.hits.hits.*._source.compliant",
 					"op": "=",
-					"value": true
+					"value": "true",
+					"report_type": "attributes",
+					"report_attributes":
+					[
+						 "filecontents.hits.hits.*._source.description",
+						 "filecontents.hits.hits.*._source.reason"
+					]
 				},
 				{
 					"eval": "filecontents.compliance.timed_out",
 					"op": "=",
-					"value": false
+					"value": false,
+					"report_type": "attributes",
+					"report_attributes":
+					[
+						 "filecontents.hits.hits.*._source.description",
+						 "filecontents.hits.hits.*._source.reason"
+					]
 				}
 			]
 		},
@@ -26,14 +38,24 @@
 			"conditions":
 			[
 				{
-					"eval": "filecontents.hits.hits._source.vulnerable",
+					"eval": "filecontents.hits.hits.*._source.vulnerable",
 					"op": "=",
-					"value": false
+					"value": false,
+					"report_type": "attributes",
+					"report_attributes":
+					[
+						 "filecontents.hits.hits.*._source.namespace"
+					]
 				},
 				{
 					"eval": "filecontents.vulnerability.timed_out",
 					"op": "=",
-					"value": false
+					"value": false,
+					"report_type": "attributes",
+					"report_attributes":
+					[
+						 "filecontents.hits.hits.*._source.namespace"
+					]					
 				}
 
 			]
