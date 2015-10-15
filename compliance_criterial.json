@@ -10,14 +10,14 @@
 			"conditions":
 			[
 				{
-					"eval": "filecontents.hits.hits.*._source.compliant",
+					"eval": "filecontents.compliance.hits.hits.*._source.compliant",
 					"op": "=",
 					"value": "true",
 					"reportType": "Attributes",
 					"reportAttributes":
 					[
-						 "filecontents.hits.hits.*._source.description",
-						 "filecontents.hits.hits.*._source.reason"
+						 "filecontents.compliance.hits.hits.*._source.description",
+						 "filecontents.compliance.hits.hits.*._source.reason"
 					]
 				},
 				{
@@ -32,19 +32,19 @@
 			"conditions":
 			[
 				{
-					"eval": "filecontents.hits.hits.*._source.vulnerable",
+					"eval": "filecontents.vulnerability.hits.hits.*._source.vulnerable",
 					"op": "=",
 					"value": false,
 					"reportType": "Attributes",
 					"reportAttributes":
 					[
-						 "filecontents.hits.hits.*._source.namespace"
+						 "filecontents.vulnerability.hits.hits.*._source.namespace"
 					]
 				},
 				{
 					"eval": "filecontents.vulnerability.timed_out",
 					"op": "=",
-					"value": false				
+					"value": false
 				}
 
 			]
