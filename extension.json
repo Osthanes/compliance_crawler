@@ -108,14 +108,14 @@ if [ -f ${EXT_DIR}/check_crawler_results.py ]; then
     if [ $RESULT -ne 0 ]; then
         echo -e \"${red}Issues found in or while getting compliance results ${no_color}\"
         if [ $DRA_ENABLED -eq 0 ]; then
-            ${EXT_DIR}/utilities/sendMessage.sh -l bad -m \"Issues found in or while getting compliance results. Check the Deployment Risk Analytics decision report at - ${DRA_REPORT_URL}\"
+            ${EXT_DIR}/utilities/sendMessage.sh -l bad -m \"completed with issues found in or while getting compliance results.\"
         fi
         end_script_time
         exit 1
     else
         echo -e \"${green}Compliance and vulnerability scan was successful ${no_color}\"
         if [ $DRA_ENABLED -eq 0 ]; then
-            ${EXT_DIR}/utilities/sendMessage.sh -l good -m \"Compliance and vulnerability scan was successful. Check the Deployment Risk Analytics decision report at - ${DRA_REPORT_URL}\"
+            ${EXT_DIR}/utilities/sendMessage.sh -l good -m \"Compliance and vulnerability scan was successful.\"
         fi
     fi  
 else 
