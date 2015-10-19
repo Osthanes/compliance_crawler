@@ -41,6 +41,34 @@ if [ -n $EXT_DIR ]; then
     export PATH=$EXT_DIR:$PATH
 fi 
 
+#########################################
+# Configure log file to store errors  #
+#########################################
+if [ -z "$ERROR_LOG_FILE" ]; then
+    ERROR_LOG_FILE="${EXT_DIR}/errors.log"
+    export ERROR_LOG_FILE
+fi
+
+#################################
+# Source git_util file          #
+#################################
+source ${EXT_DIR}/git_util.sh
+
+################################
+# get the extensions utilities #
+################################
+pushd . >/dev/null
+cd $EXT_DIR 
+git_retry clone https://github.com/Osthanes/utilities.git utilities
+export PYTHONPATH=$EXT_DIR/utilities:$PYTHONPATH
+popd >/dev/null
+
+#################################
+# Source utilities sh files     #
+#################################
+source ${EXT_DIR}/utilities/ice_utils.sh
+source ${EXT_DIR}/utilities/logging_utils.sh
+
 ##############################
 # Identify the Image to use  #
 ##############################
@@ -55,40 +83,42 @@ if [ -z $IMAGE_NAME ]; then
         . build.properties 
         export IMAGE_NAME
         debugme cat build.properties
-        echo "IMAGE_NAME: $IMAGE_NAME"
+        log_and_echo "$INFO" "IMAGE_NAME: $IMAGE_NAME"
     fi  
     if [ -z $IMAGE_NAME ]; then
         if [ -n $FULL_REPOSITORY_NAME ]; then 
             export IMAGE_NAME=$FULL_REPOSITORY_NAME
         fi
         if [ -z $IMAGE_NAME ]; then
-            echo -e "${red}IMAGE_NAME not set. Set the IMAGE_NAME in the environment or provide a Docker build job as input to this deploy job. ${no_color}" | tee -a "$ERROR_LOG_FILE"
-            echo -e "${red}If there was a recent change to the pipeline, such as deleting or moving a job or stage, check that the input to this and other later stages is still set to the correct build stage and job ${no_color}" | tee -a "$ERROR_LOG_FILE"
+            log_and_echo "$ERROR" "IMAGE_NAME not set. Set the IMAGE_NAME in the environment or provide a Docker build job as input to this deploy job."
+            log_and_echo "$ERROR" "If there was a recent change to the pipeline, such as deleting or moving a job or stage, check that the input to this and other later stages is still set to the correct build stage and job."
             ${EXT_DIR}/print_help.sh
+            ${EXT_DIR}/utilities/sendMessage.sh -l bad -m "Failed to get image name."
             exit 1
         fi
     fi 
 else 
-    echo -e "${label_color}Image being overridden by the environment. Using ${IMAGE_NAME} ${no_color}"
+    log_and_echo "$LABEL" "Image being overridden by the environment. Using ${IMAGE_NAME}"
 fi 
 
 ################################
 # Setup archive information    #
 ################################
 if [ -z $WORKSPACE ]; then 
-    echo -e "${red}Please set WORKSPACE in the environment${no_color}"
+    log_and_echo "$ERROR" "Please set WORKSPACE in the environment properties."
+    ${EXT_DIR}/utilities/sendMessage.sh -l bad -m "Please set WORKSPACE in the environment properties."
     exit 1
 fi 
 
 if [ -z $ARCHIVE_DIR ]; then 
-    echo "${label_color}ARCHIVE_DIR was not set, setting to WORKSPACE/archive ${no_color}"
+    log_and_echo "$LABEL" "ARCHIVE_DIR was not set, setting to WORKSPACE/archive."
     export ARCHIVE_DIR="${WORKSPACE}"
 fi 
 
 if [ -d $ARCHIVE_DIR ]; then
-  echo "Archiving to $ARCHIVE_DIR"
+  log_and_echo "$INFO" "Archiving to $ARCHIVE_DIR"
 else 
-  echo "Creating archive directory $ARCHIVE_DIR"
+  log_and_echo "$INFO" "Creating archive directory $ARCHIVE_DIR"
   mkdir $ARCHIVE_DIR 
 fi 
 export LOG_DIR=$ARCHIVE_DIR
@@ -104,7 +134,7 @@ if [ $RESULT -eq 0 ]; then
     export OLDCF_LOCATION=`which cf`
 fi
 # get the newest version
-echo "Installing Cloud Foundry CLI"
+log_and_echo "$INFO" "Installing Cloud Foundry CLI"
 pushd . >/dev/null
 cd $EXT_DIR 
 curl --silent -o cf-linux-amd64.tgz -v -L https://cli.run.pivotal.io/stable?release=linux64-binary &>/dev/null 
@@ -113,11 +143,12 @@ tar -xvf cf-linux-amd64.tar  &> /dev/null
 cf help &> /dev/null
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-    echo -e "${red}Could not install the cloud foundry CLI ${no_color}"
+    log_and_echo "$ERROR" "Could not install the cloud foundry CLI"
+    ${EXT_DIR}/utilities/sendMessage.sh -l bad -m "Could not install the cloud foundry CLI"
     exit 1
 fi  
 popd >/dev/null
-echo -e "${label_color}Successfully installed Cloud Foundry CLI ${no_color}"
+log_and_echo "$SUCCESSFUL" "Successfully installed Cloud Foundry CLI"
 
 ##########################################
 # setup bluemix env
@@ -138,16 +169,16 @@ if [ $? -eq 0 ]; then
 elif [ -n "$BLUEMIX_TARGET" ]; then
     # cf not setup yet, try manual setup
     if [ "$BLUEMIX_TARGET" == "staging" ]; then 
-        echo -e "Targetting staging Bluemix"
+        log_and_echo "$INFO" "Targetting staging Bluemix"
         export BLUEMIX_API_HOST="api.stage1.ng.bluemix.net"
     elif [ "$BLUEMIX_TARGET" == "prod" ]; then 
-        echo -e "Targetting production Bluemix"
+        log_and_echo "$INFO" "Targetting production Bluemix"
         export BLUEMIX_API_HOST="api.ng.bluemix.net"
     else 
-        echo -e "${red}Unknown Bluemix environment specified${no_color}"
+        log_and_echo "$INFO" "$ERROR" "Unknown Bluemix environment specified"
     fi 
 else 
-    echo -e "Targetting production Bluemix"
+    log_and_echo "$INFO" "Targetting production Bluemix"
     export BLUEMIX_API_HOST="api.ng.bluemix.net"
 fi
 
@@ -158,61 +189,66 @@ if [ -n "$BLUEMIX_USER" ] || [ ! -f ~/.cf/config.json ]; then
     # need to gather information from the environment 
     # Get the Bluemix user and password information 
     if [ -z "$BLUEMIX_USER" ]; then 
-        echo -e "${red} Please set BLUEMIX_USER on environment ${no_color} "
+        log_and_echo "$ERROR" "Please set BLUEMIX_USER on environment"
+        ${EXT_DIR}/utilities/sendMessage.sh -l bad -m "Please set BLUEMIX_USER as an environment property"
         exit 1
     fi 
     if [ -z "$BLUEMIX_PASSWORD" ]; then 
-        echo -e "${red} Please set BLUEMIX_PASSWORD as an environment property environment ${no_color} "
+        log_and_echo "$ERROR" "Please set BLUEMIX_PASSWORD as an environment property environment"
+        ${EXT_DIR}/utilities/sendMessage.sh -l bad -m "Please set BLUEMIX_PASSWORD as an environment property"
         exit 1
     fi 
     if [ -z "$BLUEMIX_ORG" ]; then 
         export BLUEMIX_ORG=$BLUEMIX_USER
-        echo -e "${label_color} Using ${BLUEMIX_ORG} for Bluemix organization, please set BLUEMIX_ORG if on the environment if you wish to change this. ${no_color} "
+        log_and_echo "$LABEL" "Using ${BLUEMIX_ORG} for Bluemix organization, please set BLUEMIX_ORG if on the environment if you wish to change this."
     fi 
     if [ -z "$BLUEMIX_SPACE" ]; then
         export BLUEMIX_SPACE="dev"
-        echo -e "${label_color} Using ${BLUEMIX_SPACE} for Bluemix space, please set BLUEMIX_SPACE if on the environment if you wish to change this. ${no_color} "
+        log_and_echo "$LABEL" "Using ${BLUEMIX_SPACE} for Bluemix space, please set BLUEMIX_SPACE if on the environment if you wish to change this."
     fi 
-    echo -e "${label_color}Targetting information.  Can be updated by setting environment variables${no_color}"
-    echo "BLUEMIX_USER: ${BLUEMIX_USER}"
-    echo "BLUEMIX_SPACE: ${BLUEMIX_SPACE}"
-    echo "BLUEMIX_ORG: ${BLUEMIX_ORG}"
-    echo "BLUEMIX_PASSWORD: xxxxx"
+    log_and_echo "$LABEL" "Targetting information.  Can be updated by setting environment variables"
+    log_and_echo "$INFO" "BLUEMIX_USER: ${BLUEMIX_USER}"
+    log_and_echo "$INFO" "BLUEMIX_SPACE: ${BLUEMIX_SPACE}"
+    log_and_echo "$INFO" "BLUEMIX_ORG: ${BLUEMIX_ORG}"
+    log_and_echo "$INFO" "BLUEMIX_PASSWORD: xxxxx"
     echo ""
-    echo -e "${label_color}Logging in to Bluemix using environment properties${no_color}"
+    log_and_echo "$LABEL" "Logging in to Bluemix using environment properties"
     debugme echo "login command: cf login -a ${BLUEMIX_API_HOST} -u ${BLUEMIX_USER} -p XXXXX -o ${BLUEMIX_ORG} -s ${BLUEMIX_SPACE}"
     cf login -a ${BLUEMIX_API_HOST} -u ${BLUEMIX_USER} -p ${BLUEMIX_PASSWORD} -o ${BLUEMIX_ORG} -s ${BLUEMIX_SPACE} 2> /dev/null
     RESULT=$?
 else 
     # we are already logged in.  Simply check via cf command 
-    echo -e "${label_color}Logging into IBM Container Service using credentials passed from IBM DevOps Services ${no_color}"
+    log_and_echo "$LABEL" "Logging into IBM Container Service using credentials passed from IBM DevOps Services"
     cf target >/dev/null 2>/dev/null
     RESULT=$?
     if [ ! $RESULT -eq 0 ]; then
-        echo "cf target did not return successfully.  Login failed."
+        log_and_echo "$INFO" "cf target did not return successfully.  Login failed."
     fi 
 fi 
 
 
 # check login result 
 if [ $RESULT -eq 1 ]; then
-    echo -e "${red}Failed to login to IBM Bluemix${no_color}"
+    log_and_echo "$ERROR" "Failed to login to IBM Bluemix"
+    ${EXT_DIR}/utilities/sendMessage.sh -l bad -m "Failed to login to IBM Bluemix"
     exit $RESULT
 else 
-    echo -e "${green}Successfully logged into IBM Bluemix${no_color}"
+    log_and_echo "$SUCCESSFUL" "Successfully logged into IBM Bluemix"
 fi 
 
-# get the extensions utilities
-pushd . >/dev/null
-cd $EXT_DIR 
-git clone https://github.com/Osthanes/utilities.git utilities
-export PYTHONPATH=$EXT_DIR/utilities:$PYTHONPATH
-popd >/dev/null
+########################
+# get BLUEMIX_USER     #
+########################
+if [ -z "$BLUEMIX_USER" ]; then
+    # set targeting information from config.json file
+    if [ -f ~/.cf/config.json ]; then
+        get_targeting_info
+    fi
+fi
 
 ############################
 # enable logging to logmet #
 ############################
-source $EXT_DIR/utilities/logging_utils.sh
 setup_met_logging "${BLUEMIX_USER}" "${BLUEMIX_PASSWORD}"
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
@@ -227,9 +263,9 @@ export DRA_ENABLED=1
 export CRITERIAL_NAME="compliance_criterial"
 setup_dra "${CRITERIAL_NAME}"
 if [ $RESULT -eq 0 ]; then
-    log_and_echo "Successfully Setup DRA for criterial name '${CRITERIAL_NAME}'."
+    log_and_echo "$SUCCESSFUL" "Successfully Setup DRA for criterial name '${CRITERIAL_NAME}'."
 elif [ $RESULT -gt 1 ]; then
     log_and_echo "$WARN" "Failed to setup DRA for criterial name '${CRITERIAL_NAME}'."
 fi
 
-echo -e "${label_color}Initialization complete${no_color}"
+log_and_echo "$LABEL" "Initialization complete"
