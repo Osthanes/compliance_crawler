@@ -207,8 +207,6 @@ if [ -n "$BLUEMIX_USER" ] || [ ! -f ~/.cf/config.json ]; then
         log_and_echo "$LABEL" "Using ${BLUEMIX_SPACE} for Bluemix space, please set BLUEMIX_SPACE if on the environment if you wish to change this."
     fi 
     log_and_echo "$LABEL" "Targetting information.  Can be updated by setting environment variables"
-    log_and_echo "$INFO" "BLUEMIX_API_HOST: ${BLUEMIX_API_HOST}"
-    log_and_echo "$INFO" "BLUEMIX_TARGET: ${BLUEMIX_TARGET}"
     log_and_echo "$INFO" "BLUEMIX_USER: ${BLUEMIX_USER}"
     log_and_echo "$INFO" "BLUEMIX_SPACE: ${BLUEMIX_SPACE}"
     log_and_echo "$INFO" "BLUEMIX_ORG: ${BLUEMIX_ORG}"
@@ -237,6 +235,9 @@ if [ $RESULT -eq 1 ]; then
 else 
     log_and_echo "$SUCCESSFUL" "Successfully logged into IBM Bluemix"
 fi 
+
+log_and_echo "$INFO" "BLUEMIX_API_HOST: ${BLUEMIX_API_HOST}"
+log_and_echo "$INFO" "BLUEMIX_TARGET: ${BLUEMIX_TARGET}"
 
 ########################
 # get BLUEMIX_USER     #

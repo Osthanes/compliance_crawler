@@ -63,8 +63,9 @@ if [ -f ${EXT_DIR}/check_crawler_results.py ]; then
     # add the appscan result json file to DRA
     if [ $DRA_ENABLED -eq 0 ]; then
         RESULT_FILE=\"compliance-result.json\"
+        EVENT_TYPE=\"SecurityCompliance.json\"
         if [ -e \"$RESULT_FILE\" ]; then
-            add_result_rule_to_dra \"${RESULT_FILE}\"
+            add_result_rule_to_dra \"${RESULT_FILE}\" \"${EVENT_TYPE}\"
             RC=$?
             if [ $RC -eq 0 ]; then
                 log_and_echo \"$SUCCESSFUL\" \"Request DRA decision for ${CRITERIAL_NAME}.\"
