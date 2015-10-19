@@ -532,6 +532,7 @@ def wait_for_image_results (images):
 
 # begin main execution sequence
 
+
 try:
     # set us up per args and env vars
     parsed_args = parse_args()
