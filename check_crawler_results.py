@@ -473,6 +473,7 @@ def check_vulnerabilities (image):
 # get and report results from the listed images, waiting as needed
 def wait_for_image_results (images):
     global last_image_id
+    global compliance_result
 
     all_passed = True
     any_passed = False
@@ -527,6 +528,12 @@ def wait_for_image_results (images):
             else:
                 python_utils.LOGGER.debug("Unable to get image id, no URL presented")
 
+        # generate compliance-result.json file
+        if compliance_result and any_passed:
+            compliance_result_file = './compliance-result.json'
+            with open(compliance_result_file, 'w') as outfile:
+                json.dump(compliance_result, outfile, sort_keys = True)
+
     return all_passed
 
 
@@ -547,12 +554,6 @@ try:
 
     # check the images, wait until done (or timeout)
     all_passed = wait_for_image_results( parsed_args['images'] )
-
-    # generate compliance-result.json file
-    if compliance_result:
-        compliance_result_file = './compliance-result.json'
-        with open(compliance_result_file, 'w') as outfile:
-            json.dump(compliance_result, outfile, sort_keys = True)
 
     endtime = timeit.default_timer()
     print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
