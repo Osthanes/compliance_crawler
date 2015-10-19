@@ -46,7 +46,7 @@ fi
 INIT_END_TIME=$(date +\"%s\")
 export INIT_EST_TIME=$(($INIT_END_TIME-$INIT_START_TIME))
 log_and_echo \"$INFO\" \"Init runtime of `date -u -d @\"$INIT_EST_TIME\" +\'%-Mm %-Ss\'`\"
-log_and_echo \"$INFO\" \"${label_color}Starting test script${no_color}\"
+log_and_echo \"$INFO\" \"Starting test script\"
 
 # helper function to print the end time for this script
 end_script_time() {
@@ -116,6 +116,7 @@ if [ -f ${EXT_DIR}/check_crawler_results.py ]; then
     fi  
 else 
     log_and_echo \"$ERROR\" \"Compliance scan helper script not available, failed.\"
+    ${EXT_DIR}/utilities/sendMessage.sh -l good -m \"Compliance scan helper script not available, failed.\"
     end_script_time
     exit 1
 fi  
