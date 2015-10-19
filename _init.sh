@@ -163,9 +163,11 @@ if [ $? -eq 0 ]; then
     if [ $? -eq 0 ]; then
         # on staging, make sure bm target is set for staging
         export BLUEMIX_TARGET="staging"
+        export BLUEMIX_API_HOST="api.stage1.ng.bluemix.net"
     else
         # on prod, make sure bm target is set for prod
         export BLUEMIX_TARGET="prod"
+        export BLUEMIX_API_HOST="api.ng.bluemix.net"
     fi
 elif [ -n "$BLUEMIX_TARGET" ]; then
     # cf not setup yet, try manual setup
