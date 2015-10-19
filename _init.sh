@@ -155,6 +155,7 @@ log_and_echo "$SUCCESSFUL" "Successfully installed Cloud Foundry CLI"
 ##########################################
 # attempt to  target env automatically
 CF_API=`cf api`
+debugme echo "CF_API: ${CF_API}"
 if [ $? -eq 0 ]; then
     # find the bluemix api host
     export BLUEMIX_API_HOST=`echo $CF_API  | awk '{print $3}' | sed '0,/.*\/\//s///'`
