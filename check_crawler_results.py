@@ -332,7 +332,7 @@ def check_compliance (image):
                 # check if we got back an image id
                 if "nova" in comp_res and "Id" in comp_res["nova"]:
                     last_image_id = comp_res["nova"]["Id"]
-                compliance_result.update({'compliance': comp_res})
+                compliance_result.update({'compliance': checkedlist})
 
     else:
         # don't check compliance == compliance check complete
@@ -461,7 +461,7 @@ def check_vulnerabilities (image):
                 # check if we got back an image id
                 if "nova" in vuln_res and "Id" in vuln_res["nova"]:
                     last_image_id = vuln_res["nova"]["Id"]
-                compliance_result.update({'vulnerability': vuln_res})
+                compliance_result.update({'vulnerability': checkedlist})
 
     else:
         # don't check vulnerabilities == vuln check complete
@@ -524,6 +524,9 @@ def wait_for_image_results (images):
             if last_image_id:
                 results_url = "%s/vulnerability-advisor/ui/image?id=%s&spaceGuid=%s" % (results_url, last_image_id, SPACE_GUID)
                 python_utils.LOGGER.info("For a more in-depth review of these results, go to this URL: %s" % results_url)
+                f = open("result_url","w")
+                f.write(results_url)
+                f.close()
             else:
                 python_utils.LOGGER.debug("Unable to get image id, no URL presented")
 
