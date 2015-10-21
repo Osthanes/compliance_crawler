@@ -272,6 +272,7 @@ def check_compliance (image):
                 comp_complete = True
                 # first filter to keep only latest test result for each test
                 checkedlist = {}
+                compresults = []
                 for hit in comp_res["hits"]["hits"]:
                     hit_id = hit["_source"]["compliance_id"]
                     if hit_id in COMP_IDS_TO_IGNORE:
@@ -295,8 +296,10 @@ def check_compliance (image):
                                 # if the new one is newer, or old one has no timestamp,
                                 # save the new one (replace previous)
                                 checkedlist[hit_id] = hit
+                                compresults.append(hit)
                     else:
                         checkedlist[hit_id] = hit
+                        compresults.append(hit)
 
                 # now run a count to get passed/failed/etc
                 # clear result counts
@@ -332,7 +335,7 @@ def check_compliance (image):
                 # check if we got back an image id
                 if "nova" in comp_res and "Id" in comp_res["nova"]:
                     last_image_id = comp_res["nova"]["Id"]
-                compliance_result.update({'compliance': checkedlist})
+                compliance_result.update({'compliance': compresults})
 
     else:
         # don't check compliance == compliance check complete
@@ -357,6 +360,7 @@ def check_vulnerabilities (image):
                 vuln_complete = True
                 # first filter to keep only latest test result for each test
                 checkedlist = {}
+                vulnsults = []
                 for hit in vuln_res["hits"]["hits"]:
                     if "total_usns_for_distro" in hit["_source"]:
                         # this is a summary hit
@@ -382,8 +386,10 @@ def check_vulnerabilities (image):
                                 # if the new one is newer, or old one has no timestamp,
                                 # save the new one (replace previous)
                                 checkedlist[hit_id] = hit
+                                vulnsults.append(hit)
                     else:
                         checkedlist[hit_id] = hit
+                        vulnsults.append(hit)
 
                 # clear results totals
                 passed = 0
@@ -461,7 +467,7 @@ def check_vulnerabilities (image):
                 # check if we got back an image id
                 if "nova" in vuln_res and "Id" in vuln_res["nova"]:
                     last_image_id = vuln_res["nova"]["Id"]
-                compliance_result.update({'vulnerability': checkedlist})
+                compliance_result.update({'vulnerability': vulnsults})
 
     else:
         # don't check vulnerabilities == vuln check complete

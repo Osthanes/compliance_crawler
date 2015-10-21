@@ -10,16 +10,17 @@
 			"conditions":
 			[
 				{
-					"eval": "filecontents.compliance.hits.hits.*._source.compliant",
+					"eval": "filecontents.compliance.*._source.compliant",
 					"op": "=",
 					"value": "true",
 					"reportType": "Attributes",
 					"reportAttributes":
 					[
-						 "filecontents.compliance.hits.hits.*._source.description",
-						 "filecontents.compliance.hits.hits.*._source.reason"
+						"filecontents.compliance.*._source.description",
+						"filecontents.compliance.*._source.reason"
 					]
 				},
+
 				{
 					"eval": "filecontents.compliance.timed_out",
 					"op": "=",
@@ -27,26 +28,27 @@
 				}
 			]
 		},
+
 		{
 			"name": "vulnerability",
 			"conditions":
 			[
 				{
-					"eval": "filecontents.vulnerability.hits.hits.*._source.vulnerable",
+					"eval": "filecontents.vulnerability.*._source.vulnerable",
 					"op": "=",
 					"value": false,
 					"reportType": "Attributes",
 					"reportAttributes":
 					[
-						 "filecontents.vulnerability.hits.hits.*._source.namespace"
+						"filecontents.vulnerability.*._source.namespace"
 					]
 				},
-				{
-					"eval": "filecontents.vulnerability.timed_out",
-					"op": "=",
-					"value": false
-				}
 
+				{
+					"eval": "eventType",
+					"op": "=",
+					"value": "SecurityCompliance"
+				}
 			]
 		}
 	]
