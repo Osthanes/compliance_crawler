@@ -22,9 +22,9 @@
 				},
 
 				{
-					"eval": "filecontents.compliance.timed_out",
+					"eval": "eventType",
 					"op": "=",
-					"value": false
+					"value": "SecurityCompliance"
 				}
 			]
 		},
