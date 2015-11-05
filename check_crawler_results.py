@@ -296,10 +296,8 @@ def check_compliance (image):
                                 # if the new one is newer, or old one has no timestamp,
                                 # save the new one (replace previous)
                                 checkedlist[hit_id] = hit
-                                compresults.append(hit)
                     else:
                         checkedlist[hit_id] = hit
-                        compresults.append(hit)
 
                 # now run a count to get passed/failed/etc
                 # clear result counts
@@ -309,6 +307,7 @@ def check_compliance (image):
                 failedlist = []
                 goodlist = []
                 for key, hit in checkedlist.iteritems():
+                    compresults.append(hit)
                     total += 1
                     if hit["_source"]["compliant"] == "false":
                         passed_check = False
@@ -386,10 +385,8 @@ def check_vulnerabilities (image):
                                 # if the new one is newer, or old one has no timestamp,
                                 # save the new one (replace previous)
                                 checkedlist[hit_id] = hit
-                                vulnsults.append(hit)
                     else:
                         checkedlist[hit_id] = hit
-                        vulnsults.append(hit)
 
                 # clear results totals
                 passed = 0
@@ -402,6 +399,7 @@ def check_vulnerabilities (image):
                 failedlist = []
                 goodlist = []
                 for key, hit in checkedlist.iteritems():
+                    vulnsults.append(hit)
                     # if this is the summary, may not contain a usnid
                     if "total_usns_for_distro" in hit["_source"]:
                         summary_total = hit["_source"]["total_usns_for_distro"]
