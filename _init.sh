@@ -154,7 +154,6 @@ log_and_echo "$SUCCESSFUL" "Successfully installed Cloud Foundry CLI"
 # setup bluemix env
 ##########################################
 # attempt to  target env automatically
-CF_API=`${EXT_DIR}/cf api`
 CF_API=$(${EXT_DIR}/cf api)
 RESULT=$?
 debugme echo "CF_API: ${CF_API}"
