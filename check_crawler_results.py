@@ -480,6 +480,7 @@ def wait_for_image_results (images):
 
     all_passed = True
     any_passed = False
+    failed_exception = None
     time_left = python_utils.WAIT_TIME
     # check all images
     for image in images:
@@ -488,23 +489,35 @@ def wait_for_image_results (images):
         vuln_complete = False
         last_image_id = None
         while ((not comp_complete) or (not vuln_complete)) and (time_left >= SLEEP_TIME):
-            # only check comp if not already complete
-            if not comp_complete:
-                comp_complete, passed_check = check_compliance(image)
-                # if this check completed, and it didn't pass, mark that not all passed
-                if comp_complete and (not passed_check):
-                    all_passed = False
-            # only check vulnerabilities if not already complete
-            if not vuln_complete:
-                vuln_complete, passed_check = check_vulnerabilities(image)
-                # if this check completed, and it didn't pass, mark that not all passed
-                if vuln_complete and (not passed_check):
-                    all_passed = False
+            try:
+                # only check comp if not already complete
+                if not comp_complete:
+                    comp_complete, passed_check = check_compliance(image)
+                    # if no exception, make sure it's clear
+                    failed_exception = None
+                    # if this check completed, and it didn't pass, mark that not all passed
+                    if comp_complete and (not passed_check):
+                        all_passed = False
+                # only check vulnerabilities if not already complete
+                if not vuln_complete:
+                    vuln_complete, passed_check = check_vulnerabilities(image)
+                    # if no exception, make sure it's clear
+                    failed_exception = None
+                    # if this check completed, and it didn't pass, mark that not all passed
+                    if vuln_complete and (not passed_check):
+                        all_passed = False
+            except Exception, e:
+                python_utils.LOGGER.debug( "non-fatal failure during check for image %s" % str(image), exc_info=e )
+                # we'll retry, but save the exception for if this was the last try
+                failed_exception = e
             time_left = python_utils.get_remaining_wait_time()
             if ((not comp_complete) or (not vuln_complete)) and (time_left >= SLEEP_TIME):
                 python_utils.LOGGER.info( "waiting for results for image %s" % str(image) )
                 time.sleep(SLEEP_TIME)
 
+        # if we failed because of an exception, even after retries, reraise it now
+        if (failed_exception != None):
+            raise failed_exception
 
         # if no results found for a given image, display that
         if (not parsed_args['nocompcheck']) and (not comp_complete):
