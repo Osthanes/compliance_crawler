@@ -9,7 +9,7 @@
         {
             "type": "Bluemix",
             "inclusion" : "always",
-            "regions": ["ibm:ys1:us-south", "ibm:yp:us-south"]
+            "regions": ["ibm:ys1:us-south", "ibm:yp:us-south", "ibm:yp:eu-gb"]
         }
     ],
     "params": [
