@@ -534,7 +534,7 @@ def wait_for_image_results (images):
         # if any of the scans passed, link to the results page
         if API_SERVER and any_passed:
             results_url = API_SERVER
-            results_url = results_url.replace ( 'containers-api.', 'vulnerability-advisor.')
+            results_url = results_url.replace ( 'containers-api.', 'console.')
             if not last_image_id:
                 # get the image id
                 last_image_id = get_image_id_for_name( image )
