@@ -140,6 +140,9 @@ cd $EXT_DIR
 curl --silent -o cf-linux-amd64.tgz -v -L https://cli.run.pivotal.io/stable?release=linux64-binary &>/dev/null 
 gunzip cf-linux-amd64.tgz &> /dev/null
 tar -xvf cf-linux-amd64.tar  &> /dev/null
+if [[ ! -f cf && -f cf-cli_linux_x86-64 ]]; then
+    mv cf-cli_linux_x86-64 cf
+fi
 cf help &> /dev/null
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
