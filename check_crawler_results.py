@@ -533,19 +533,14 @@ def wait_for_image_results (images):
 
         # if any of the scans passed, link to the results page
         if API_SERVER and any_passed:
-            results_url = API_SERVER
-            results_url = results_url.replace ( 'containers-api.', 'console.')
             if not last_image_id:
                 # get the image id
                 last_image_id = get_image_id_for_name( image )
             if last_image_id:
-                results_url = "%s/vulnerability-advisor/ui/image?id=%s&spaceGuid=%s" % (results_url, last_image_id, SPACE_GUID)
-                python_utils.LOGGER.info("For a more in-depth review of these results, go to this URL: %s" % results_url)
-                f = open("result_url","w")
-                f.write(results_url)
-                f.close()
+                results_cmd = "bx cr va %s" % (last_image_id)
+                python_utils.LOGGER.info("For a more in-depth review of these results, run this command: %s" % results_cmd)
             else:
-                python_utils.LOGGER.debug("Unable to get image id, no URL presented")
+                python_utils.LOGGER.debug("Unable to get image id, no command presented")
 
     return all_passed
 
