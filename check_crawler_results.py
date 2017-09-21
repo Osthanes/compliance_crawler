@@ -50,7 +50,7 @@ BEARER_TOKEN=""
 SPACE_GUID=""
 
 # last image checked
-last_image_id=None
+last_image=None
 
 # time to sleep between checks when waiting on pending jobs, in seconds
 SLEEP_TIME=30
@@ -259,7 +259,7 @@ def get_comp_info ( imagename ):
 # check for completed compliance results on an image
 # returns Boolean(complete), Boolean(all passed)
 def check_compliance (image):
-    global last_image_id
+    global last_image
     global compliance_result
 
     comp_complete = False
@@ -331,9 +331,8 @@ def check_compliance (image):
                 for hit in failedlist:
                     print "\t\t%s : %s" % ( hit["_source"]["description"], hit["_source"]["reason"] )
                 print python_utils.LABEL_NO_COLOR + python_utils.STARS
-                # check if we got back an image id
-                if "nova" in comp_res and "Id" in comp_res["nova"]:
-                    last_image_id = comp_res["nova"]["Id"]
+                # save last image
+                last_image = iamge
                 compliance_result.update({'compliance': compresults})
 
     else:
@@ -346,7 +345,7 @@ def check_compliance (image):
 # check for completed vulnerability results on an image
 # returns Boolean(complete), Boolean(all passed)
 def check_vulnerabilities (image):
-    global last_image_id
+    global last_image
     global compliance_result
 
     vuln_complete = False
@@ -462,9 +461,8 @@ def check_vulnerabilities (image):
                         failed_label = python_utils.LABEL_RED
                     print "%s\t%d checks failed" % (failed_label, summary_failed)
                 print python_utils.LABEL_NO_COLOR + python_utils.STARS
-                # check if we got back an image id
-                if "nova" in vuln_res and "Id" in vuln_res["nova"]:
-                    last_image_id = vuln_res["nova"]["Id"]
+                # save last image
+                last_image = image
                 compliance_result.update({'vulnerability': vulnsults})
 
     else:
@@ -476,7 +474,7 @@ def check_vulnerabilities (image):
 
 # get and report results from the listed images, waiting as needed
 def wait_for_image_results (images):
-    global last_image_id
+    global last_image
 
     all_passed = True
     any_passed = False
@@ -487,7 +485,7 @@ def wait_for_image_results (images):
         python_utils.LOGGER.info("Running checks on image %s" % str(image))
         comp_complete = False
         vuln_complete = False
-        last_image_id = None
+        last_image = None
         while ((not comp_complete) or (not vuln_complete)) and (time_left >= SLEEP_TIME):
             try:
                 # only check comp if not already complete
@@ -533,11 +531,11 @@ def wait_for_image_results (images):
 
         # if any of the scans passed, link to the results page
         if API_SERVER and any_passed:
-            if not last_image_id:
+            if not last_image:
                 # get the image id
-                last_image_id = get_image_id_for_name( image )
-            if last_image_id:
-                results_cmd = "bx cr va %s" % (last_image_id)
+                last_image = image
+            if last_image:
+                results_cmd = "bx cr va %s" % (last_image)
                 python_utils.LOGGER.info("For a more in-depth review of these results, run this command: %s" % results_cmd)
             else:
                 python_utils.LOGGER.debug("Unable to get image id, no command presented")
