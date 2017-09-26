@@ -356,37 +356,29 @@ def check_vulnerabilities (image):
             if vuln_res["hits"]["total"] > 0:
                 # got results, mark vulnerability check complete
                 vuln_complete = True
-                # first filter to keep only latest test result for each test
-                checkedlist = {}
-                vulnsults = []
+                # sort into groups by _index and keep track of which _index is the newest
+                newestTime = None
+                newestIndex = None
+                #scans will be in the format of _index:{time:<datetime>, hits:[hit1, hit2, hit3...]}
+                scans = {}
                 for hit in vuln_res["hits"]["hits"]:
-                    if "total_usns_for_distro" in hit["_source"]:
-                        # this is a summary hit
-                        hit_id = "summary"
-                    else:
-                        # this is a vuln hit
-                        hit_id = hit["_source"]["package_name"]
-                    # only want to show the latest result for a given test for
-                    # each image
-                    if hit_id in checkedlist:
-                        oldhit = checkedlist[hit_id]
-                        # keep only the latest result
+                    if not hit["_index"] in scans:
+                        scans[hit["_index"]] = {}
+                        scans[hit["_index"]]["hits"] = []
                         try:
-                            newtime = datetime.strptime(hit["_source"]["@timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                            scans[hit["_index"]]["time"] = datetime.strptime(hit["_source"]["@timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
                         except Exception:
-                            newtime = None
+                            scans[hit["_index"]]["time"] = None
+                    elif not scans[hit["_index"]]["time"]:
                         try:
-                            oldtime = datetime.strptime(oldhit["_source"]["@timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                            scans[hit["_index"]]["time"] = datetime.strptime(hit["_source"]["@timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
                         except Exception:
-                            oldtime = None
-                        if newtime:
-                            if (not oldtime) or oldtime<newtime:
-                                # if the new one is newer, or old one has no timestamp,
-                                # save the new one (replace previous)
-                                checkedlist[hit_id] = hit
-                    else:
-                        checkedlist[hit_id] = hit
-
+                            scans[hit["_index"]]["time"] = None
+                    scans[hit["_index"]]["hits"].append(hit)
+                    if (not newestIndex) or (not newestTime) or newestTime < scans[hit["_index"]]["time"]:
+                        newestTime = scans[hit["_index"]]["time"]
+                        newestIndex = hit["_index"]
+                vulnsults = scans[newestIndex]["hits"]
                 # clear results totals
                 passed = 0
                 failed = 0
@@ -397,8 +389,7 @@ def check_vulnerabilities (image):
                 summary_failed = 0
                 failedlist = []
                 goodlist = []
-                for key, hit in checkedlist.iteritems():
-                    vulnsults.append(hit)
+                for hit in vulnsults:
                     # if this is the summary, may not contain a usnid
                     if "total_usns_for_distro" in hit["_source"]:
                         summary_total = hit["_source"]["total_usns_for_distro"]
@@ -423,7 +414,6 @@ def check_vulnerabilities (image):
                         else:
                             passed += 1
                             goodlist.append(hit)
-
                 print python_utils.STARS
                 # if we have individual results, report those
                 if (total_packages != -1) and (vulnerable_packages != -1):
