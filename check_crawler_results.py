@@ -332,7 +332,7 @@ def check_compliance (image):
                     print "\t\t%s : %s" % ( hit["_source"]["description"], hit["_source"]["reason"] )
                 print python_utils.LABEL_NO_COLOR + python_utils.STARS
                 # save last image
-                last_image = iamge
+                last_image = image
                 compliance_result.update({'compliance': compresults})
 
     else:
